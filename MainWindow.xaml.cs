@@ -20,7 +20,7 @@ namespace PrinterCartridgeApp
         // ВНИМАНИЕ: Проверь строку подключения!
         // Если у тебя обычный SQL Server (не Express), оставь "localhost".
         // Если Express, замени на @".\SQLEXPRESS"
-        string connectionString = @"Data Source=localhost;Initial Catalog=PrinterCartridgeDB;Integrated Security=True;TrustServerCertificate=True;";
+        string connectionString = @"Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=PrinterCartridgeDB;Integrated Security=True;TrustServerCertificate=True;";
 
         public MainWindow()
         {
@@ -55,12 +55,28 @@ namespace PrinterCartridgeApp
                         {
                             if (reader.Read())
                             {
-                                string fullName = reader["FullName"].ToString();
+                                int userId = Convert.ToInt32(reader["UserID"]);
                                 int roleId = Convert.ToInt32(reader["RoleID"]);
 
-                                MessageBox.Show($"Успешный вход!\nФИО: {fullName}\nРоль (ID): {roleId}", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
-
-                                // TODO: Позже здесь мы сделаем открытие разных окон в зависимости от RoleID
+                                // Открываем окно в зависимости от роли
+                                if (roleId == 1) // Пользователь
+                                {
+                                    UserWindow userWin = new UserWindow(userId);
+                                    userWin.Show();
+                                    this.Close();
+                                }
+                                else if (roleId == 2) // Техник
+                                {
+                                    TechWindow techWin = new TechWindow(userId);
+                                    techWin.Show();
+                                    this.Close();
+                                }
+                                else if (roleId == 3) // Администратор
+                                {
+                                    AdminWindow adminWin = new AdminWindow(userId);
+                                    adminWin.Show();
+                                    this.Close();
+                                }
                             }
                             else
                             {
