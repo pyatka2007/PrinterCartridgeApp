@@ -1,0 +1,54 @@
+﻿<Window x:Class="PrinterCartridgeApp.UserWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Кабинет пользователя" Height="600" Width="900"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource MaterialDesignPaper}">
+
+    <Grid Margin="20">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="300"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- ЛЕВАЯ ПАНЕЛЬ: Создание заявки -->
+        <materialDesign:Card Grid.Column="0" Padding="20" Margin="0,0,20,0" UniformCornerRadius="10">
+            <StackPanel>
+                <TextBlock Text="Новая заявка" FontSize="22" FontWeight="Bold" Margin="0,0,0,20"/>
+
+                <TextBlock Text="Тип картриджа" Margin="0,0,0,5" Foreground="Gray"/>
+                <ComboBox x:Name="cbCartridgeType" materialDesign:HintAssist.Hint="Выберите картридж" Margin="0,0,0,20" FontSize="14"/>
+
+                <TextBlock Text="Номер кабинета" Margin="0,0,0,5" Foreground="Gray"/>
+                <TextBox x:Name="txtRoom" materialDesign:HintAssist.Hint="Например: 3" Margin="0,0,0,30" FontSize="14"/>
+
+                <Button x:Name="btnSubmitRequest" Content="ОТПРАВИТЬ ЗАЯВКУ" Style="{StaticResource MaterialDesignRaisedButton}" Height="45" FontSize="14" Click="btnSubmitRequest_Click"/>
+            </StackPanel>
+        </materialDesign:Card>
+
+        <!-- ПРАВАЯ ПАНЕЛЬ: История заявок -->
+        <materialDesign:Card Grid.Column="1" Padding="20" UniformCornerRadius="10">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="Мои заявки" FontSize="22" FontWeight="Bold" Margin="0,0,0,15"/>
+
+                <DataGrid Grid.Row="1" x:Name="dgRequests" Style="{StaticResource MaterialDesignDataGrid}" 
+                          AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="ID" Binding="{Binding RequestID}" Width="50"/>
+                        <DataGridTextColumn Header="Картридж" Binding="{Binding CartridgeName}" Width="100"/>
+                        <DataGridTextColumn Header="Кабинет" Binding="{Binding RoomNumber}" Width="80"/>
+                        <DataGridTextColumn Header="Дата" Binding="{Binding CreatedDate, StringFormat=\{0:dd.MM.yyyy HH:mm\}}" Width="130"/>
+                        <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="100"/>
+                        <DataGridTextColumn Header="Комментарий техника" Binding="{Binding Comment}" Width="*"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </materialDesign:Card>
+    </Grid>
+</Window>
