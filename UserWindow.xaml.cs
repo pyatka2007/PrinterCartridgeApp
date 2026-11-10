@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MaterialDesignThemes.Wpf;
+using System;
 using System.Data;
 using System.Data.SqlClient;
 using System.Windows;
@@ -121,6 +122,23 @@ namespace PrinterCartridgeApp
                     MessageBox.Show("Ошибка при создании заявки: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
+        }
+        private void ThemeToggle_Checked(object sender, RoutedEventArgs e)
+        {
+            var paletteHelper = new PaletteHelper();
+            var theme = paletteHelper.GetTheme();
+            theme.SetBaseTheme(BaseTheme.Dark);
+            paletteHelper.SetTheme(theme);
+            ThemeIcon.Kind = PackIconKind.WeatherSunny;
+        }
+
+        private void ThemeToggle_Unchecked(object sender, RoutedEventArgs e)
+        {
+            var paletteHelper = new PaletteHelper();
+            var theme = paletteHelper.GetTheme();
+            theme.SetBaseTheme(BaseTheme.Light);
+            paletteHelper.SetTheme(theme);
+            ThemeIcon.Kind = PackIconKind.WeatherNight;
         }
     }
 }

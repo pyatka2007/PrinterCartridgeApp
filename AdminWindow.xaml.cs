@@ -13,6 +13,9 @@ using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using System.Data;
 using System.Data.SqlClient;
+using ClosedXML.Excel;
+using Microsoft.Win32;
+using MaterialDesignThemes.Wpf;
 
 namespace PrinterCartridgeApp
 {
@@ -23,6 +26,7 @@ namespace PrinterCartridgeApp
             InitializeComponent();
             LoadInventory();
             LoadUserStats();
+            LoadDashboard();
         }
 
         // Загрузка склада
@@ -159,14 +163,13 @@ namespace PrinterCartridgeApp
             using (SqlConnection connection = new SqlConnection(DbHelper.ConnectionString))
             {
                 connection.Open();
-                // Ищем выполненные заявки за последние 7 дней и считаем, каких картриджей сколько ушло
                 string query = @"
-                    SELECT c.Name as CartridgeName, COUNT(r.RequestID) as UsedCount
-                    FROM Requests r
-                    JOIN CartridgeTypes c ON r.CartridgeTypeID = c.CartridgeTypeID
-                    WHERE r.Status = N'Выполнена' 
-                      AND r.CompletionDate >= DATEADD(day, -7, GETDATE())
-                    GROUP BY c.Name";
+            SELECT c.Name as CartridgeName, COUNT(r.RequestID) as UsedCount
+            FROM Requests r
+            JOIN CartridgeTypes c ON r.CartridgeTypeID = c.CartridgeTypeID
+            WHERE r.Status = N'Выполнена' 
+              AND r.CompletionDate >= DATEADD(day, -7, GETDATE())
+            GROUP BY c.Name";
 
                 SqlDataAdapter adapter = new SqlDataAdapter(query, connection);
                 DataTable dt = new DataTable();
@@ -178,6 +181,123 @@ namespace PrinterCartridgeApp
                 }
 
                 dgReport.ItemsSource = dt.DefaultView;
+            }
+        }
+        private void btnExportExcel_Click(object sender, RoutedEventArgs e)
+        {
+            // Проверяем, есть ли данные для экспорта
+            if (dgReport.ItemsSource == null || dgReport.Items.Count == 0)
+            {
+                MessageBox.Show("Сначала сформируйте отчет (нажмите на кнопку выше)!", "Нет данных", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // Открываем окно сохранения файла
+            SaveFileDialog saveFileDialog = new SaveFileDialog
+            {
+                Filter = "Excel File|*.xlsx",
+                Title = "Сохранить отчет по расходу",
+                FileName = "Отчет_Расход_Картриджей_" + DateTime.Now.ToString("yyyy-MM-dd")
+            };
+
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                try
+                {
+                    // Создаем новую книгу Excel
+                    using (var workbook = new XLWorkbook())
+                    {
+                        // Добавляем лист
+                        var worksheet = workbook.Worksheets.Add("Расход за 7 дней");
+
+                        // Заголовки таблицы
+                        worksheet.Cell(1, 1).Value = "Картридж";
+                        worksheet.Cell(1, 2).Value = "Израсходовано (шт)";
+
+                        // Делаем заголовки жирными
+                        worksheet.Range("A1:B1").Style.Font.Bold = true;
+
+                        // Заполняем данными из таблицы (DataGrid)
+                        int row = 2;
+                        foreach (DataRowView item in dgReport.Items)
+                        {
+                            worksheet.Cell(row, 1).Value = item["CartridgeName"].ToString();
+                            worksheet.Cell(row, 2).Value = Convert.ToInt32(item["UsedCount"]);
+                            row++;
+                        }
+
+                        // Автоматически подгоняем ширину колонок
+                        worksheet.Columns().AdjustToContents();
+
+                        // Сохраняем файл
+                        workbook.SaveAs(saveFileDialog.FileName);
+                    }
+
+                    MessageBox.Show("Отчет успешно сохранен в Excel!", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Ошибка при сохранении файла: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+        // Включаем темную тему
+        private void ThemeToggle_Checked(object sender, RoutedEventArgs e)
+        {
+            var paletteHelper = new PaletteHelper();
+            var theme = paletteHelper.GetTheme();
+
+            theme.SetBaseTheme(BaseTheme.Dark); // Устанавливаем темную основу
+            paletteHelper.SetTheme(theme);
+
+            ThemeIcon.Kind = PackIconKind.WeatherSunny; // Меняем иконку на солнышко
+        }
+
+        // Возвращаем светлую тему
+        private void ThemeToggle_Unchecked(object sender, RoutedEventArgs e)
+        {
+            var paletteHelper = new PaletteHelper();
+            var theme = paletteHelper.GetTheme();
+
+            theme.SetBaseTheme(BaseTheme.Light); // Устанавливаем светлую основу
+            paletteHelper.SetTheme(theme);
+
+            ThemeIcon.Kind = PackIconKind.WeatherNight; // Меняем иконку на луну
+        }
+        // Загрузка данных для панели приборов
+        private void LoadDashboard()
+        {
+            using (SqlConnection connection = new SqlConnection(DbHelper.ConnectionString))
+            {
+                connection.Open();
+
+                // 1. Всего заявок
+                string queryTotal = "SELECT COUNT(*) FROM Requests";
+                using (SqlCommand cmd = new SqlCommand(queryTotal, connection))
+                {
+                    txtTotalRequests.Text = cmd.ExecuteScalar().ToString();
+                }
+
+                // 2. Активные заявки (Новые + В работе)
+                string queryPending = "SELECT COUNT(*) FROM Requests WHERE Status IN (N'Новая', N'В работе')";
+                using (SqlCommand cmd = new SqlCommand(queryPending, connection))
+                {
+                    txtPendingRequests.Text = cmd.ExecuteScalar().ToString();
+                }
+
+                // 3. Выполненные заявки
+                string queryCompleted = "SELECT COUNT(*) FROM Requests WHERE Status = N'Выполнена'";
+                using (SqlCommand cmd = new SqlCommand(queryCompleted, connection))
+                {
+                    txtCompletedRequests.Text = cmd.ExecuteScalar().ToString();
+                }
+
+                // 4. Общее количество картриджей на складе
+                string queryStock = "SELECT ISNULL(SUM(Quantity), 0) FROM Inventory";
+                using (SqlCommand cmd = new SqlCommand(queryStock, connection))
+                {
+                    txtTotalStock.Text = cmd.ExecuteScalar().ToString();
+                }
             }
         }
     }

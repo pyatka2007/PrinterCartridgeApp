@@ -7,9 +7,58 @@
         Background="{DynamicResource MaterialDesignPaper}">
 
     <Grid Margin="20">
-        <TabControl Style="{StaticResource MaterialDesignTabControl}">
+        <!-- ПЕРЕКЛЮЧАТЕЛЬ ТЕМЫ (в правом верхнем углу) -->
+        <ToggleButton x:Name="ThemeToggle" Style="{StaticResource MaterialDesignActionToggleButton}" 
+                      HorizontalAlignment="Right" VerticalAlignment="Top" 
+                      ToolTip="Переключить тему"
+                      Checked="ThemeToggle_Checked" Unchecked="ThemeToggle_Unchecked">
+            <materialDesign:PackIcon x:Name="ThemeIcon" Kind="WeatherNight" Width="24" Height="24"/>
+        </ToggleButton>
 
-            <!-- ВКЛАДКА 1: Управление складом -->
+        <!-- Твой TabControl -->
+        <TabControl Style="{StaticResource MaterialDesignTabControl}" Margin="0,40,0,0">
+
+            <!-- ВКЛАДКА 1: ПАНЕЛЬ ПРИБОРОВ -->
+            <TabItem Header="ПАНЕЛЬ ПРИБОРОВ">
+                <Grid Margin="20">
+                    <UniformGrid Columns="2" Rows="2" VerticalAlignment="Center" HorizontalAlignment="Center">
+
+                        <!-- Карточка 1: Всего заявок -->
+                        <materialDesign:Card Margin="15" Padding="20" UniformCornerRadius="10" Background="#E3F2FD">
+                            <StackPanel>
+                                <TextBlock Text="ВСЕГО ЗАЯВОК" FontSize="16" Foreground="#1565C0" FontWeight="Bold"/>
+                                <TextBlock x:Name="txtTotalRequests" Text="0" FontSize="48" FontWeight="Bold" Foreground="#0D47A1" Margin="0,10,0,0"/>
+                            </StackPanel>
+                        </materialDesign:Card>
+
+                        <!-- Карточка 2: В работе -->
+                        <materialDesign:Card Margin="15" Padding="20" UniformCornerRadius="10" Background="#FFF3E0">
+                            <StackPanel>
+                                <TextBlock Text="ТРЕБУЮТ ВНИМАНИЯ" FontSize="16" Foreground="#E65100" FontWeight="Bold"/>
+                                <TextBlock x:Name="txtPendingRequests" Text="0" FontSize="48" FontWeight="Bold" Foreground="#BF360C" Margin="0,10,0,0"/>
+                            </StackPanel>
+                        </materialDesign:Card>
+
+                        <!-- Карточка 3: Выполнено -->
+                        <materialDesign:Card Margin="15" Padding="20" UniformCornerRadius="10" Background="#E8F5E9">
+                            <StackPanel>
+                                <TextBlock Text="ВЫПОЛНЕНО" FontSize="16" Foreground="#2E7D32" FontWeight="Bold"/>
+                                <TextBlock x:Name="txtCompletedRequests" Text="0" FontSize="48" FontWeight="Bold" Foreground="#1B5E20" Margin="0,10,0,0"/>
+                            </StackPanel>
+                        </materialDesign:Card>
+
+                        <!-- Карточка 4: Склад -->
+                        <materialDesign:Card Margin="15" Padding="20" UniformCornerRadius="10" Background="#F3E5F5">
+                            <StackPanel>
+                                <TextBlock Text="КАРТРИДЖЕЙ НА СКЛАДЕ" FontSize="16" Foreground="#6A1B9A" FontWeight="Bold"/>
+                                <TextBlock x:Name="txtTotalStock" Text="0" FontSize="48" FontWeight="Bold" Foreground="#4A148C" Margin="0,10,0,0"/>
+                            </StackPanel>
+                        </materialDesign:Card>
+
+                    </UniformGrid>
+                </Grid>
+            </TabItem>
+            <!-- ВКЛАДКА 2: Управление складом -->
             <TabItem Header="СКЛАД КАРТРИДЖЕЙ">
                 <Grid Margin="10">
                     <Grid.RowDefinitions>
@@ -37,7 +86,7 @@
 
                         <!-- Стиль для оранжевой подсветки строк -->
                         <DataGrid.RowStyle>
-                            <Style TargetType="DataGridRow">
+                            <Style TargetType="DataGridRow" BasedOn="{StaticResource MaterialDesignDataGridRow}">
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsLowStock}" Value="1">
                                         <Setter Property="Background" Value="#FFF3E0"/>
@@ -52,7 +101,7 @@
                             <DataGridTextColumn Header="Модель" Binding="{Binding Name}" Width="100"/>
                             <DataGridTextColumn Header="Описание" Binding="{Binding Description}" Width="*"/>
                             <DataGridTextColumn Header="Кол-во на складе" Binding="{Binding Quantity}" Width="150" FontWeight="Bold"/>
-                            <DataGridTextColumn Header="Прогноз (недель)" Binding="{Binding WeeksLeft}" Width="130" FontWeight="SemiBold" Foreground="DarkBlue"/>
+                            <DataGridTextColumn Header="Прогноз (недель)" Binding="{Binding WeeksLeft}" Width="130" FontWeight="SemiBold"/>
                         </DataGrid.Columns>
                     </DataGrid>
 
@@ -64,7 +113,7 @@
                 </Grid>
             </TabItem>
 
-            <!-- ВКЛАДКА 2: Статистика и Отчеты -->
+            <!-- ВКЛАДКА 3: Статистика и Отчеты -->
             <TabItem Header="СТАТИСТИКА И ОТЧЕТЫ">
                 <Grid Margin="10">
                     <Grid.ColumnDefinitions>
@@ -83,7 +132,7 @@
           AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False">
 
                             <DataGrid.RowStyle>
-                                <Style TargetType="DataGridRow">
+                                <Style TargetType="DataGridRow" BasedOn="{StaticResource MaterialDesignDataGridRow}">
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsSuspicious}" Value="1">
                                             <Setter Property="Background" Value="#FFCDD2"/>
@@ -109,7 +158,10 @@
                         </Grid.RowDefinitions>
                         <TextBlock Grid.Row="0" Text="Отчет по расходу" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
 
-                        <Button Grid.Row="1" x:Name="btnGenerateReport" Content="ПОКАЗАТЬ РАСХОД ЗА 7 ДНЕЙ" Style="{StaticResource MaterialDesignRaisedSecondaryButton}" Margin="0,0,0,15" Click="btnGenerateReport_Click"/>
+                        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,15">
+                            <Button x:Name="btnGenerateReport" Content="ПОКАЗАТЬ РАСХОД ЗА 7 ДНЕЙ" Style="{StaticResource MaterialDesignRaisedSecondaryButton}" Margin="0,0,10,0" Click="btnGenerateReport_Click"/>
+                            <Button x:Name="btnExportExcel" Content="ЭКСПОРТ В EXCEL" Style="{StaticResource MaterialDesignRaisedButton}" Click="btnExportExcel_Click"/>
+                        </StackPanel>
 
                         <DataGrid Grid.Row="2" x:Name="dgReport" Style="{StaticResource MaterialDesignDataGrid}" 
                                   AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False">

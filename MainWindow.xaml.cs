@@ -1,4 +1,6 @@
-﻿using System.Text;
+﻿using MaterialDesignThemes.Wpf;
+using System.Data.SqlClient;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -8,7 +10,6 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
-using System.Data.SqlClient;
 
 namespace PrinterCartridgeApp
 {
@@ -86,6 +87,23 @@ namespace PrinterCartridgeApp
                     MessageBox.Show("Ошибка подключения к БД: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
+        }
+        private void ThemeToggle_Checked(object sender, RoutedEventArgs e)
+        {
+            var paletteHelper = new PaletteHelper();
+            var theme = paletteHelper.GetTheme();
+            theme.SetBaseTheme(BaseTheme.Dark);
+            paletteHelper.SetTheme(theme);
+            ThemeIcon.Kind = PackIconKind.WeatherSunny;
+        }
+
+        private void ThemeToggle_Unchecked(object sender, RoutedEventArgs e)
+        {
+            var paletteHelper = new PaletteHelper();
+            var theme = paletteHelper.GetTheme();
+            theme.SetBaseTheme(BaseTheme.Light);
+            paletteHelper.SetTheme(theme);
+            ThemeIcon.Kind = PackIconKind.WeatherNight;
         }
     }
 }

@@ -1,5 +1,8 @@
-﻿using System;
+﻿using MaterialDesignThemes.Wpf;
+using System;
 using System.Collections.Generic;
+using System.Data;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -11,8 +14,6 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
-using System.Data;
-using System.Data.SqlClient;
 
 namespace PrinterCartridgeApp
 {
@@ -178,6 +179,23 @@ namespace PrinterCartridgeApp
                     }
                 }
             }
+        }
+        private void ThemeToggle_Checked(object sender, RoutedEventArgs e)
+        {
+            var paletteHelper = new PaletteHelper();
+            var theme = paletteHelper.GetTheme();
+            theme.SetBaseTheme(BaseTheme.Dark);
+            paletteHelper.SetTheme(theme);
+            ThemeIcon.Kind = PackIconKind.WeatherSunny;
+        }
+
+        private void ThemeToggle_Unchecked(object sender, RoutedEventArgs e)
+        {
+            var paletteHelper = new PaletteHelper();
+            var theme = paletteHelper.GetTheme();
+            theme.SetBaseTheme(BaseTheme.Light);
+            paletteHelper.SetTheme(theme);
+            ThemeIcon.Kind = PackIconKind.WeatherNight;
         }
     }
 }
