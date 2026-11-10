@@ -1,12 +1,49 @@
 ﻿<Window x:Class="PrinterCartridgeApp.TechWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:PrinterCartridgeApp"
-        mc:Ignorable="d"
-        Title="TechWindow" Height="450" Width="800">
-    <Grid>
-        
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Кабинет техника" Height="650" Width="1000"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource MaterialDesignPaper}">
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="Заявки на замену картриджей" FontSize="24" FontWeight="Bold" Margin="0,0,0,15"/>
+
+        <!-- Таблица заявок -->
+        <DataGrid Grid.Row="1" x:Name="dgRequests" Style="{StaticResource MaterialDesignDataGrid}" 
+                  AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" SelectionMode="Single">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="ID" Binding="{Binding RequestID}" Width="50"/>
+                <DataGridTextColumn Header="Сотрудник" Binding="{Binding UserName}" Width="180"/>
+                <DataGridTextColumn Header="Кабинет" Binding="{Binding RoomNumber}" Width="80"/>
+                <DataGridTextColumn Header="Картридж" Binding="{Binding CartridgeName}" Width="100"/>
+                <DataGridTextColumn Header="Дата" Binding="{Binding CreatedDate, StringFormat=\{0:dd.MM.yyyy HH:mm\}}" Width="120"/>
+                <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="100"/>
+                <DataGridTextColumn Header="Комментарий" Binding="{Binding Comment}" Width="*"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- Панель управления -->
+        <materialDesign:Card Grid.Row="2" Margin="0,15,0,0" Padding="15" UniformCornerRadius="10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBox Grid.Column="0" x:Name="txtComment" materialDesign:HintAssist.Hint="Комментарий (например: заменен, старого нет в кабинете)" Margin="0,0,15,0" VerticalAlignment="Center"/>
+
+                <Button Grid.Column="1" x:Name="btnTakeWork" Content="ВЗЯТЬ В РАБОТУ" Style="{StaticResource MaterialDesignOutlinedButton}" Margin="0,0,10,0" Click="btnTakeWork_Click"/>
+
+                <Button Grid.Column="2" x:Name="btnComplete" Content="ВЫПОЛНЕНО" Style="{StaticResource MaterialDesignRaisedButton}" Click="btnComplete_Click"/>
+            </Grid>
+        </materialDesign:Card>
     </Grid>
 </Window>
