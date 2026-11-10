@@ -7,7 +7,16 @@
         Background="{DynamicResource MaterialDesignPaper}">
 
     <Grid Margin="20">
-        <TabControl Style="{StaticResource MaterialDesignTabControl}">
+        <!-- ПЕРЕКЛЮЧАТЕЛЬ ТЕМЫ (в правом верхнем углу) -->
+        <ToggleButton x:Name="ThemeToggle" Style="{StaticResource MaterialDesignActionToggleButton}" 
+                      HorizontalAlignment="Right" VerticalAlignment="Top" 
+                      ToolTip="Переключить тему"
+                      Checked="ThemeToggle_Checked" Unchecked="ThemeToggle_Unchecked">
+            <materialDesign:PackIcon x:Name="ThemeIcon" Kind="WeatherNight" Width="24" Height="24"/>
+        </ToggleButton>
+
+        <!-- Твой TabControl -->
+        <TabControl Style="{StaticResource MaterialDesignTabControl}" Margin="0,40,0,0">
 
             <!-- ВКЛАДКА 1: ПАНЕЛЬ ПРИБОРОВ -->
             <TabItem Header="ПАНЕЛЬ ПРИБОРОВ">
@@ -77,7 +86,7 @@
 
                         <!-- Стиль для оранжевой подсветки строк -->
                         <DataGrid.RowStyle>
-                            <Style TargetType="DataGridRow">
+                            <Style TargetType="DataGridRow" BasedOn="{StaticResource MaterialDesignDataGridRow}">
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsLowStock}" Value="1">
                                         <Setter Property="Background" Value="#FFF3E0"/>
@@ -92,7 +101,7 @@
                             <DataGridTextColumn Header="Модель" Binding="{Binding Name}" Width="100"/>
                             <DataGridTextColumn Header="Описание" Binding="{Binding Description}" Width="*"/>
                             <DataGridTextColumn Header="Кол-во на складе" Binding="{Binding Quantity}" Width="150" FontWeight="Bold"/>
-                            <DataGridTextColumn Header="Прогноз (недель)" Binding="{Binding WeeksLeft}" Width="130" FontWeight="SemiBold" Foreground="DarkBlue"/>
+                            <DataGridTextColumn Header="Прогноз (недель)" Binding="{Binding WeeksLeft}" Width="130" FontWeight="SemiBold"/>
                         </DataGrid.Columns>
                     </DataGrid>
 
@@ -123,7 +132,7 @@
           AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False">
 
                             <DataGrid.RowStyle>
-                                <Style TargetType="DataGridRow">
+                                <Style TargetType="DataGridRow" BasedOn="{StaticResource MaterialDesignDataGridRow}">
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsSuspicious}" Value="1">
                                             <Setter Property="Background" Value="#FFCDD2"/>

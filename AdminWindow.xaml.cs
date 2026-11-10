@@ -15,6 +15,7 @@ using System.Data;
 using System.Data.SqlClient;
 using ClosedXML.Excel;
 using Microsoft.Win32;
+using MaterialDesignThemes.Wpf;
 
 namespace PrinterCartridgeApp
 {
@@ -239,6 +240,29 @@ namespace PrinterCartridgeApp
                     MessageBox.Show("Ошибка при сохранении файла: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
+        }
+        // Включаем темную тему
+        private void ThemeToggle_Checked(object sender, RoutedEventArgs e)
+        {
+            var paletteHelper = new PaletteHelper();
+            var theme = paletteHelper.GetTheme();
+
+            theme.SetBaseTheme(BaseTheme.Dark); // Устанавливаем темную основу
+            paletteHelper.SetTheme(theme);
+
+            ThemeIcon.Kind = PackIconKind.WeatherSunny; // Меняем иконку на солнышко
+        }
+
+        // Возвращаем светлую тему
+        private void ThemeToggle_Unchecked(object sender, RoutedEventArgs e)
+        {
+            var paletteHelper = new PaletteHelper();
+            var theme = paletteHelper.GetTheme();
+
+            theme.SetBaseTheme(BaseTheme.Light); // Устанавливаем светлую основу
+            paletteHelper.SetTheme(theme);
+
+            ThemeIcon.Kind = PackIconKind.WeatherNight; // Меняем иконку на луну
         }
         // Загрузка данных для панели приборов
         private void LoadDashboard()
