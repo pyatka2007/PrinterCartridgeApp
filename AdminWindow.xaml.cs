@@ -49,14 +49,17 @@ namespace PrinterCartridgeApp
             using (SqlConnection connection = new SqlConnection(DbHelper.ConnectionString))
             {
                 connection.Open();
-                // Считаем количество заявок для каждого пользователя (у кого 0, тоже выводим)
+                // Считаем количество заявок для каждого пользователя
                 string query = @"
-                    SELECT u.FullName, COUNT(r.RequestID) as RequestCount
-                    FROM Users u
-                    LEFT JOIN Requests r ON u.UserID = r.UserID
-                    WHERE u.RoleID = 1
-                    GROUP BY u.FullName
-                    ORDER BY RequestCount DESC";
+                SELECT u.FullName, 
+                COUNT(r.RequestID) as RequestCount,
+                CASE WHEN COUNT(r.RequestID) >= 3 THEN 1 ELSE 0 END as IsSuspicious
+                FROM Users u
+                LEFT JOIN Requests r ON u.UserID = r.UserID 
+                AND r.CreatedDate >= DATEADD(day, -7, GETDATE())
+                WHERE u.RoleID = 1
+                GROUP BY u.FullName
+                ORDER BY RequestCount DESC";
 
                 SqlDataAdapter adapter = new SqlDataAdapter(query, connection);
                 DataTable dt = new DataTable();

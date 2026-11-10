@@ -50,7 +50,19 @@
                         </Grid.RowDefinitions>
                         <TextBlock Grid.Row="0" Text="Активность пользователей" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
                         <DataGrid Grid.Row="1" x:Name="dgUserStats" Style="{StaticResource MaterialDesignDataGrid}" 
-                                  AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False">
+          AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False">
+
+                            <DataGrid.RowStyle>
+                                <Style TargetType="DataGridRow">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsSuspicious}" Value="1">
+                                            <Setter Property="Background" Value="#FFCDD2"/>
+                                            <Setter Property="Foreground" Value="#B71C1C"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGrid.RowStyle>
+
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Сотрудник" Binding="{Binding FullName}" Width="*"/>
                                 <DataGridTextColumn Header="Кол-во заявок" Binding="{Binding RequestCount}" Width="120"/>
