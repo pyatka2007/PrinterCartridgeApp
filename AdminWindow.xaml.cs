@@ -32,14 +32,42 @@ namespace PrinterCartridgeApp
             {
                 connection.Open();
                 string query = @"
-                    SELECT i.InventoryID, c.Name, c.Description, i.Quantity 
-                    FROM Inventory i
-                    JOIN CartridgeTypes c ON i.CartridgeTypeID = c.CartridgeTypeID";
+                SELECT i.InventoryID, c.Name, c.Description, i.Quantity,
+                   CASE WHEN i.Quantity <= 3 THEN 1 ELSE 0 END as IsLowStock,
+                   ISNULL(consumed.Cnt, 0) as ConsumedLast4Weeks,
+                   CASE 
+                       WHEN ISNULL(consumed.Cnt, 0) = 0 THEN 999.0
+                       ELSE CAST(i.Quantity * 4.0 / consumed.Cnt AS DECIMAL(5,1))
+                   END as WeeksLeft
+                FROM Inventory i
+                JOIN CartridgeTypes c ON i.CartridgeTypeID = c.CartridgeTypeID
+                LEFT JOIN (
+                SELECT CartridgeTypeID, COUNT(*) as Cnt
+                FROM Requests
+                WHERE Status = N'Выполнена' AND CompletionDate >= DATEADD(day, -28, GETDATE())
+                GROUP BY CartridgeTypeID
+                ) consumed ON i.CartridgeTypeID = consumed.CartridgeTypeID";
 
                 SqlDataAdapter adapter = new SqlDataAdapter(query, connection);
                 DataTable dt = new DataTable();
                 adapter.Fill(dt);
                 dgInventory.ItemsSource = dt.DefaultView;
+
+                // Проверка на IsLowStock = 1
+                bool hasLowStock = false;
+                foreach (DataRow row in dt.Rows)
+                {
+                    if (Convert.ToInt32(row["IsLowStock"]) == 1)
+                    {
+                        hasLowStock = true;
+                        break;
+                    }
+                }
+
+                if (hasLowStock)
+                    pnlWarning.Visibility = Visibility.Visible;
+                else
+                    pnlWarning.Visibility = Visibility.Collapsed;
             }
         }
 
