@@ -25,6 +25,7 @@ namespace PrinterCartridgeApp
             InitializeComponent();
             LoadInventory();
             LoadUserStats();
+            LoadDashboard();
         }
 
         // Загрузка склада
@@ -237,6 +238,42 @@ namespace PrinterCartridgeApp
                 catch (Exception ex)
                 {
                     MessageBox.Show("Ошибка при сохранении файла: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+        // Загрузка данных для панели приборов
+        private void LoadDashboard()
+        {
+            using (SqlConnection connection = new SqlConnection(DbHelper.ConnectionString))
+            {
+                connection.Open();
+
+                // 1. Всего заявок
+                string queryTotal = "SELECT COUNT(*) FROM Requests";
+                using (SqlCommand cmd = new SqlCommand(queryTotal, connection))
+                {
+                    txtTotalRequests.Text = cmd.ExecuteScalar().ToString();
+                }
+
+                // 2. Активные заявки (Новые + В работе)
+                string queryPending = "SELECT COUNT(*) FROM Requests WHERE Status IN (N'Новая', N'В работе')";
+                using (SqlCommand cmd = new SqlCommand(queryPending, connection))
+                {
+                    txtPendingRequests.Text = cmd.ExecuteScalar().ToString();
+                }
+
+                // 3. Выполненные заявки
+                string queryCompleted = "SELECT COUNT(*) FROM Requests WHERE Status = N'Выполнена'";
+                using (SqlCommand cmd = new SqlCommand(queryCompleted, connection))
+                {
+                    txtCompletedRequests.Text = cmd.ExecuteScalar().ToString();
+                }
+
+                // 4. Общее количество картриджей на складе
+                string queryStock = "SELECT ISNULL(SUM(Quantity), 0) FROM Inventory";
+                using (SqlCommand cmd = new SqlCommand(queryStock, connection))
+                {
+                    txtTotalStock.Text = cmd.ExecuteScalar().ToString();
                 }
             }
         }

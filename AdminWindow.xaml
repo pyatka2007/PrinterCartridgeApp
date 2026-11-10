@@ -9,7 +9,47 @@
     <Grid Margin="20">
         <TabControl Style="{StaticResource MaterialDesignTabControl}">
 
-            <!-- ВКЛАДКА 1: Управление складом -->
+            <!-- ВКЛАДКА 1: ПАНЕЛЬ ПРИБОРОВ -->
+            <TabItem Header="ПАНЕЛЬ ПРИБОРОВ">
+                <Grid Margin="20">
+                    <UniformGrid Columns="2" Rows="2" VerticalAlignment="Center" HorizontalAlignment="Center">
+
+                        <!-- Карточка 1: Всего заявок -->
+                        <materialDesign:Card Margin="15" Padding="20" UniformCornerRadius="10" Background="#E3F2FD">
+                            <StackPanel>
+                                <TextBlock Text="ВСЕГО ЗАЯВОК" FontSize="16" Foreground="#1565C0" FontWeight="Bold"/>
+                                <TextBlock x:Name="txtTotalRequests" Text="0" FontSize="48" FontWeight="Bold" Foreground="#0D47A1" Margin="0,10,0,0"/>
+                            </StackPanel>
+                        </materialDesign:Card>
+
+                        <!-- Карточка 2: В работе -->
+                        <materialDesign:Card Margin="15" Padding="20" UniformCornerRadius="10" Background="#FFF3E0">
+                            <StackPanel>
+                                <TextBlock Text="ТРЕБУЮТ ВНИМАНИЯ" FontSize="16" Foreground="#E65100" FontWeight="Bold"/>
+                                <TextBlock x:Name="txtPendingRequests" Text="0" FontSize="48" FontWeight="Bold" Foreground="#BF360C" Margin="0,10,0,0"/>
+                            </StackPanel>
+                        </materialDesign:Card>
+
+                        <!-- Карточка 3: Выполнено -->
+                        <materialDesign:Card Margin="15" Padding="20" UniformCornerRadius="10" Background="#E8F5E9">
+                            <StackPanel>
+                                <TextBlock Text="ВЫПОЛНЕНО" FontSize="16" Foreground="#2E7D32" FontWeight="Bold"/>
+                                <TextBlock x:Name="txtCompletedRequests" Text="0" FontSize="48" FontWeight="Bold" Foreground="#1B5E20" Margin="0,10,0,0"/>
+                            </StackPanel>
+                        </materialDesign:Card>
+
+                        <!-- Карточка 4: Склад -->
+                        <materialDesign:Card Margin="15" Padding="20" UniformCornerRadius="10" Background="#F3E5F5">
+                            <StackPanel>
+                                <TextBlock Text="КАРТРИДЖЕЙ НА СКЛАДЕ" FontSize="16" Foreground="#6A1B9A" FontWeight="Bold"/>
+                                <TextBlock x:Name="txtTotalStock" Text="0" FontSize="48" FontWeight="Bold" Foreground="#4A148C" Margin="0,10,0,0"/>
+                            </StackPanel>
+                        </materialDesign:Card>
+
+                    </UniformGrid>
+                </Grid>
+            </TabItem>
+            <!-- ВКЛАДКА 2: Управление складом -->
             <TabItem Header="СКЛАД КАРТРИДЖЕЙ">
                 <Grid Margin="10">
                     <Grid.RowDefinitions>
@@ -64,7 +104,7 @@
                 </Grid>
             </TabItem>
 
-            <!-- ВКЛАДКА 2: Статистика и Отчеты -->
+            <!-- ВКЛАДКА 3: Статистика и Отчеты -->
             <TabItem Header="СТАТИСТИКА И ОТЧЕТЫ">
                 <Grid Margin="10">
                     <Grid.ColumnDefinitions>
