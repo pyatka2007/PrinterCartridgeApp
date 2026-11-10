@@ -7,7 +7,6 @@ namespace PrinterCartridgeApp
 {
     public partial class UserWindow : Window
     {
-        string connectionString = @"Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=PrinterCartridgeDB;Integrated Security=True;TrustServerCertificate=True;";
         private int currentUserId;
 
         public UserWindow(int userId)
@@ -21,7 +20,7 @@ namespace PrinterCartridgeApp
         // Загружаем типы картриджей в выпадающий список
         private void LoadCartridges()
         {
-            using (SqlConnection connection = new SqlConnection(connectionString))
+            using (SqlConnection connection = new SqlConnection(DbHelper.ConnectionString))
             {
                 connection.Open();
                 string query = "SELECT CartridgeTypeID, Name FROM CartridgeTypes";
@@ -38,7 +37,7 @@ namespace PrinterCartridgeApp
         // Загружаем историю заявок текущего пользователя
         private void LoadRequests()
         {
-            using (SqlConnection connection = new SqlConnection(connectionString))
+            using (SqlConnection connection = new SqlConnection(DbHelper.ConnectionString))
             {
                 connection.Open();
                 string query = @"
@@ -68,7 +67,7 @@ namespace PrinterCartridgeApp
                 return;
             }
 
-            using (SqlConnection connection = new SqlConnection(connectionString))
+            using (SqlConnection connection = new SqlConnection(DbHelper.ConnectionString))
             {
                 try
                 {

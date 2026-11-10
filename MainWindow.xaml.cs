@@ -17,11 +17,6 @@ namespace PrinterCartridgeApp
     /// </summary>
     public partial class MainWindow : Window
     {
-        // ВНИМАНИЕ: Проверь строку подключения!
-        // Если у тебя обычный SQL Server (не Express), оставь "localhost".
-        // Если Express, замени на @".\SQLEXPRESS"
-        string connectionString = @"Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=PrinterCartridgeDB;Integrated Security=True;TrustServerCertificate=True;";
-
         public MainWindow()
         {
             InitializeComponent();
@@ -39,7 +34,7 @@ namespace PrinterCartridgeApp
                 return;
             }
 
-            using (SqlConnection connection = new SqlConnection(connectionString))
+            using (SqlConnection connection = new SqlConnection(DbHelper.ConnectionString))
             {
                 try
                 {
