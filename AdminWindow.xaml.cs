@@ -15,6 +15,9 @@ using System.Data;
 using System.Data.SqlClient;
 using ClosedXML.Excel;
 using Microsoft.Win32;
+using LiveChartsCore;
+using LiveChartsCore.SkiaSharpView;
+using System.Collections.Generic;
 
 namespace PrinterCartridgeApp
 {
@@ -162,14 +165,13 @@ namespace PrinterCartridgeApp
             using (SqlConnection connection = new SqlConnection(DbHelper.ConnectionString))
             {
                 connection.Open();
-                // Ищем выполненные заявки за последние 7 дней и считаем, каких картриджей сколько ушло
                 string query = @"
-                    SELECT c.Name as CartridgeName, COUNT(r.RequestID) as UsedCount
-                    FROM Requests r
-                    JOIN CartridgeTypes c ON r.CartridgeTypeID = c.CartridgeTypeID
-                    WHERE r.Status = N'Выполнена' 
-                      AND r.CompletionDate >= DATEADD(day, -7, GETDATE())
-                    GROUP BY c.Name";
+            SELECT c.Name as CartridgeName, COUNT(r.RequestID) as UsedCount
+            FROM Requests r
+            JOIN CartridgeTypes c ON r.CartridgeTypeID = c.CartridgeTypeID
+            WHERE r.Status = N'Выполнена' 
+              AND r.CompletionDate >= DATEADD(day, -7, GETDATE())
+            GROUP BY c.Name";
 
                 SqlDataAdapter adapter = new SqlDataAdapter(query, connection);
                 DataTable dt = new DataTable();
@@ -178,9 +180,46 @@ namespace PrinterCartridgeApp
                 if (dt.Rows.Count == 0)
                 {
                     MessageBox.Show("За последние 7 дней не было выполненных заявок.", "Отчет пуст", MessageBoxButton.OK, MessageBoxImage.Information);
+                    // Очищаем график, если данных нет
+                    consumptionChart.Series = new ISeries[] { };
+                    consumptionChart.XAxes = new Axis[] { };
+                    dgReport.ItemsSource = null;
+                    return;
                 }
 
                 dgReport.ItemsSource = dt.DefaultView;
+
+                // --- ПОСТРОЕНИЕ ГРАФИКА ---
+                // Собираем названия картриджей (для подписей снизу)
+                var labels = new List<string>();
+                // Собираем количество (для высоты столбиков)
+                var values = new List<double>();
+
+                foreach (DataRow row in dt.Rows)
+                {
+                    labels.Add(row["CartridgeName"].ToString());
+                    values.Add(Convert.ToDouble(row["UsedCount"]));
+                }
+
+                // Настраиваем столбики (Series)
+                consumptionChart.Series = new ISeries[]
+                {
+            new ColumnSeries<double>
+            {
+                Values = values.ToArray(),
+                Name = "Израсходовано" // Название в легенде
+            }
+                };
+
+                // Настраиваем подписи снизу (XAxes)
+                consumptionChart.XAxes = new Axis[]
+                {
+            new Axis
+            {
+                Labels = labels.ToArray(),
+                LabelsRotation = 0
+            }
+                };
             }
         }
         private void btnExportExcel_Click(object sender, RoutedEventArgs e)

@@ -2,6 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF"
         Title="Кабинет администратора" Height="650" Width="1000"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource MaterialDesignPaper}">
@@ -145,6 +146,8 @@
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="250"/>
+                            <!-- НОВАЯ СТРОКА ДЛЯ ГРАФИКА -->
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
                         <TextBlock Grid.Row="0" Text="Отчет по расходу" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
@@ -154,7 +157,10 @@
                             <Button x:Name="btnExportExcel" Content="ЭКСПОРТ В EXCEL" Style="{StaticResource MaterialDesignRaisedButton}" Click="btnExportExcel_Click"/>
                         </StackPanel>
 
-                        <DataGrid Grid.Row="2" x:Name="dgReport" Style="{StaticResource MaterialDesignDataGrid}" 
+                        <!-- НОВЫЙ ГРАФИК -->
+                        <lvc:CartesianChart Grid.Row="2" x:Name="consumptionChart" Margin="0,0,0,15"/>
+
+                        <DataGrid Grid.Row="3" x:Name="dgReport" Style="{StaticResource MaterialDesignDataGrid}" 
                                   AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Картридж" Binding="{Binding CartridgeName}" Width="*"/>
