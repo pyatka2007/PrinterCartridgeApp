@@ -13,6 +13,8 @@ using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using System.Data;
 using System.Data.SqlClient;
+using ClosedXML.Excel;
+using Microsoft.Win32;
 
 namespace PrinterCartridgeApp
 {
@@ -178,6 +180,64 @@ namespace PrinterCartridgeApp
                 }
 
                 dgReport.ItemsSource = dt.DefaultView;
+            }
+        }
+        private void btnExportExcel_Click(object sender, RoutedEventArgs e)
+        {
+            // Проверяем, есть ли данные для экспорта
+            if (dgReport.ItemsSource == null || dgReport.Items.Count == 0)
+            {
+                MessageBox.Show("Сначала сформируйте отчет (нажмите на кнопку выше)!", "Нет данных", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // Открываем окно сохранения файла
+            SaveFileDialog saveFileDialog = new SaveFileDialog
+            {
+                Filter = "Excel File|*.xlsx",
+                Title = "Сохранить отчет по расходу",
+                FileName = "Отчет_Расход_Картриджей_" + DateTime.Now.ToString("yyyy-MM-dd")
+            };
+
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                try
+                {
+                    // Создаем новую книгу Excel
+                    using (var workbook = new XLWorkbook())
+                    {
+                        // Добавляем лист
+                        var worksheet = workbook.Worksheets.Add("Расход за 7 дней");
+
+                        // Заголовки таблицы
+                        worksheet.Cell(1, 1).Value = "Картридж";
+                        worksheet.Cell(1, 2).Value = "Израсходовано (шт)";
+
+                        // Делаем заголовки жирными
+                        worksheet.Range("A1:B1").Style.Font.Bold = true;
+
+                        // Заполняем данными из таблицы (DataGrid)
+                        int row = 2;
+                        foreach (DataRowView item in dgReport.Items)
+                        {
+                            worksheet.Cell(row, 1).Value = item["CartridgeName"].ToString();
+                            worksheet.Cell(row, 2).Value = Convert.ToInt32(item["UsedCount"]);
+                            row++;
+                        }
+
+                        // Автоматически подгоняем ширину колонок
+                        worksheet.Columns().AdjustToContents();
+
+                        // Сохраняем файл
+                        workbook.SaveAs(saveFileDialog.FileName);
+                    }
+
+                    MessageBox.Show("Отчет успешно сохранен в Excel!", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Ошибка при сохранении файла: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
         }
     }

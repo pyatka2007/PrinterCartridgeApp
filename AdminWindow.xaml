@@ -109,7 +109,10 @@
                         </Grid.RowDefinitions>
                         <TextBlock Grid.Row="0" Text="Отчет по расходу" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
 
-                        <Button Grid.Row="1" x:Name="btnGenerateReport" Content="ПОКАЗАТЬ РАСХОД ЗА 7 ДНЕЙ" Style="{StaticResource MaterialDesignRaisedSecondaryButton}" Margin="0,0,0,15" Click="btnGenerateReport_Click"/>
+                        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,15">
+                            <Button x:Name="btnGenerateReport" Content="ПОКАЗАТЬ РАСХОД ЗА 7 ДНЕЙ" Style="{StaticResource MaterialDesignRaisedSecondaryButton}" Margin="0,0,10,0" Click="btnGenerateReport_Click"/>
+                            <Button x:Name="btnExportExcel" Content="ЭКСПОРТ В EXCEL" Style="{StaticResource MaterialDesignRaisedButton}" Click="btnExportExcel_Click"/>
+                        </StackPanel>
 
                         <DataGrid Grid.Row="2" x:Name="dgReport" Style="{StaticResource MaterialDesignDataGrid}" 
                                   AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False">
