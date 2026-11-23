@@ -164,10 +164,11 @@
                         </StackPanel>
 
                         <DataGrid Grid.Row="2" x:Name="dgReport" Style="{StaticResource MaterialDesignDataGrid}" 
-                                  AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False">
+          AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="Картридж" Binding="{Binding CartridgeName}" Width="*"/>
-                                <DataGridTextColumn Header="Израсходовано (шт)" Binding="{Binding UsedCount}" Width="150" FontWeight="Bold"/>
+                                <DataGridTextColumn Header="Сотрудник" Binding="{Binding UserName}" Width="*"/>
+                                <DataGridTextColumn Header="Картридж" Binding="{Binding CartridgeName}" Width="120"/>
+                                <DataGridTextColumn Header="Кол-во (шт)" Binding="{Binding UsedCount}" Width="100" FontWeight="Bold"/>
                             </DataGrid.Columns>
                         </DataGrid>
                     </Grid>

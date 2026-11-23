@@ -36,42 +36,34 @@ namespace PrinterCartridgeApp
             {
                 connection.Open();
                 string query = @"
-                SELECT i.InventoryID, c.Name, c.Description, i.Quantity,
+            SELECT i.InventoryID, c.Name, c.Description, i.Quantity,
                    CASE WHEN i.Quantity <= 3 THEN 1 ELSE 0 END as IsLowStock,
                    ISNULL(consumed.Cnt, 0) as ConsumedLast4Weeks,
                    CASE 
                        WHEN ISNULL(consumed.Cnt, 0) = 0 THEN 999.0
                        ELSE CAST(i.Quantity * 4.0 / consumed.Cnt AS DECIMAL(5,1))
                    END as WeeksLeft
-                FROM Inventory i
-                JOIN CartridgeTypes c ON i.CartridgeTypeID = c.CartridgeTypeID
-                LEFT JOIN (
-                SELECT CartridgeTypeID, COUNT(*) as Cnt
-                FROM Requests
-                WHERE Status = N'Выполнена' AND CompletionDate >= DATEADD(day, -28, GETDATE())
-                GROUP BY CartridgeTypeID
-                ) consumed ON i.CartridgeTypeID = consumed.CartridgeTypeID";
+            FROM Inventory i
+            JOIN CartridgeTypes c ON i.CartridgeTypeID = c.CartridgeTypeID
+            LEFT JOIN (
+                SELECT rd.CartridgeTypeID, COUNT(*) as Cnt
+                FROM RequestDetails rd
+                JOIN Requests r ON rd.RequestID = r.RequestID
+                WHERE r.Status = N'Выполнена' AND r.CompletionDate >= DATEADD(day, -28, GETDATE())
+                GROUP BY rd.CartridgeTypeID
+            ) consumed ON i.CartridgeTypeID = consumed.CartridgeTypeID";
 
                 SqlDataAdapter adapter = new SqlDataAdapter(query, connection);
                 DataTable dt = new DataTable();
                 adapter.Fill(dt);
                 dgInventory.ItemsSource = dt.DefaultView;
 
-                // Проверка на IsLowStock = 1
                 bool hasLowStock = false;
                 foreach (DataRow row in dt.Rows)
                 {
-                    if (Convert.ToInt32(row["IsLowStock"]) == 1)
-                    {
-                        hasLowStock = true;
-                        break;
-                    }
+                    if (Convert.ToInt32(row["IsLowStock"]) == 1) { hasLowStock = true; break; }
                 }
-
-                if (hasLowStock)
-                    pnlWarning.Visibility = Visibility.Visible;
-                else
-                    pnlWarning.Visibility = Visibility.Collapsed;
+                pnlWarning.Visibility = hasLowStock ? Visibility.Visible : Visibility.Collapsed;
             }
         }
 
@@ -163,13 +155,17 @@ namespace PrinterCartridgeApp
             using (SqlConnection connection = new SqlConnection(DbHelper.ConnectionString))
             {
                 connection.Open();
+                // Группируем по пользователю и картриджу
                 string query = @"
-            SELECT c.Name as CartridgeName, COUNT(r.RequestID) as UsedCount
+            SELECT u.FullName as UserName, c.Name as CartridgeName, COUNT(rd.DetailID) as UsedCount
             FROM Requests r
-            JOIN CartridgeTypes c ON r.CartridgeTypeID = c.CartridgeTypeID
+            JOIN Users u ON r.UserID = u.UserID
+            JOIN RequestDetails rd ON r.RequestID = rd.RequestID
+            JOIN CartridgeTypes c ON rd.CartridgeTypeID = c.CartridgeTypeID
             WHERE r.Status = N'Выполнена' 
               AND r.CompletionDate >= DATEADD(day, -7, GETDATE())
-            GROUP BY c.Name";
+            GROUP BY u.FullName, c.Name
+            ORDER BY u.FullName, c.Name";
 
                 SqlDataAdapter adapter = new SqlDataAdapter(query, connection);
                 DataTable dt = new DataTable();
@@ -185,54 +181,46 @@ namespace PrinterCartridgeApp
         }
         private void btnExportExcel_Click(object sender, RoutedEventArgs e)
         {
-            // Проверяем, есть ли данные для экспорта
             if (dgReport.ItemsSource == null || dgReport.Items.Count == 0)
             {
-                MessageBox.Show("Сначала сформируйте отчет (нажмите на кнопку выше)!", "Нет данных", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Сначала сформируйте отчет!", "Нет данных", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            // Открываем окно сохранения файла
             SaveFileDialog saveFileDialog = new SaveFileDialog
             {
                 Filter = "Excel File|*.xlsx",
                 Title = "Сохранить отчет по расходу",
-                FileName = "Отчет_Расход_Картриджей_" + DateTime.Now.ToString("yyyy-MM-dd")
+                FileName = "Отчет_Расход_" + DateTime.Now.ToString("yyyy-MM-dd")
             };
 
             if (saveFileDialog.ShowDialog() == true)
             {
                 try
                 {
-                    // Создаем новую книгу Excel
                     using (var workbook = new XLWorkbook())
                     {
-                        // Добавляем лист
                         var worksheet = workbook.Worksheets.Add("Расход за 7 дней");
 
-                        // Заголовки таблицы
-                        worksheet.Cell(1, 1).Value = "Картридж";
-                        worksheet.Cell(1, 2).Value = "Израсходовано (шт)";
+                        // Новые заголовки
+                        worksheet.Cell(1, 1).Value = "Сотрудник";
+                        worksheet.Cell(1, 2).Value = "Картридж";
+                        worksheet.Cell(1, 3).Value = "Израсходовано (шт)";
 
-                        // Делаем заголовки жирными
-                        worksheet.Range("A1:B1").Style.Font.Bold = true;
+                        worksheet.Range("A1:C1").Style.Font.Bold = true;
 
-                        // Заполняем данными из таблицы (DataGrid)
                         int row = 2;
                         foreach (DataRowView item in dgReport.Items)
                         {
-                            worksheet.Cell(row, 1).Value = item["CartridgeName"].ToString();
-                            worksheet.Cell(row, 2).Value = Convert.ToInt32(item["UsedCount"]);
+                            worksheet.Cell(row, 1).Value = item["UserName"].ToString();
+                            worksheet.Cell(row, 2).Value = item["CartridgeName"].ToString();
+                            worksheet.Cell(row, 3).Value = Convert.ToInt32(item["UsedCount"]);
                             row++;
                         }
 
-                        // Автоматически подгоняем ширину колонок
                         worksheet.Columns().AdjustToContents();
-
-                        // Сохраняем файл
                         workbook.SaveAs(saveFileDialog.FileName);
                     }
-
                     MessageBox.Show("Отчет успешно сохранен в Excel!", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 catch (Exception ex)
