@@ -32,6 +32,7 @@ namespace PrinterCartridgeApp
             LoadDashboard();
             LoadUsers();
             LoadCartridgeTypes();
+            LoadAllRequests();
         }
 
         // Загрузка склада
@@ -106,15 +107,23 @@ namespace PrinterCartridgeApp
                 return;
             }
 
+            // Проверяем, что введено корректное число
+            if (!int.TryParse(txtStockAmount.Text, out int amount) || amount <= 0)
+            {
+                MessageBox.Show("Введите корректное положительное число!", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
             DataRowView row = (DataRowView)dgInventory.SelectedItem;
             int inventoryId = Convert.ToInt32(row["InventoryID"]);
 
             using (SqlConnection connection = new SqlConnection(DbHelper.ConnectionString))
             {
                 connection.Open();
-                string query = "UPDATE Inventory SET Quantity = Quantity + 1 WHERE InventoryID = @id";
+                string query = "UPDATE Inventory SET Quantity = Quantity + @amount WHERE InventoryID = @id";
                 using (SqlCommand cmd = new SqlCommand(query, connection))
                 {
+                    cmd.Parameters.AddWithValue("@amount", amount);
                     cmd.Parameters.AddWithValue("@id", inventoryId);
                     cmd.ExecuteNonQuery();
                 }
@@ -131,22 +140,30 @@ namespace PrinterCartridgeApp
                 return;
             }
 
+            // Проверяем, что введено корректное число
+            if (!int.TryParse(txtStockAmount.Text, out int amount) || amount <= 0)
+            {
+                MessageBox.Show("Введите корректное положительное число!", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
             DataRowView row = (DataRowView)dgInventory.SelectedItem;
             int inventoryId = Convert.ToInt32(row["InventoryID"]);
             int currentQty = Convert.ToInt32(row["Quantity"]);
 
-            if (currentQty <= 0)
+            if (currentQty < amount)
             {
-                MessageBox.Show("На складе уже 0 штук, списывать нечего!", "Внимание", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show($"Нельзя списать {amount} шт., так как на складе всего {currentQty} шт.!", "Внимание", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             using (SqlConnection connection = new SqlConnection(DbHelper.ConnectionString))
             {
                 connection.Open();
-                string query = "UPDATE Inventory SET Quantity = Quantity - 1 WHERE InventoryID = @id";
+                string query = "UPDATE Inventory SET Quantity = Quantity - @amount WHERE InventoryID = @id";
                 using (SqlCommand cmd = new SqlCommand(query, connection))
                 {
+                    cmd.Parameters.AddWithValue("@amount", amount);
                     cmd.Parameters.AddWithValue("@id", inventoryId);
                     cmd.ExecuteNonQuery();
                 }
@@ -160,26 +177,25 @@ namespace PrinterCartridgeApp
             using (SqlConnection connection = new SqlConnection(DbHelper.ConnectionString))
             {
                 connection.Open();
-                // Группируем по пользователю и картриджу
+                // Добавили кабинет и дату выполнения
                 string query = @"
-            SELECT u.FullName as UserName, c.Name as CartridgeName, COUNT(rd.DetailID) as UsedCount
+            SELECT u.FullName as UserName, r.RoomNumber, c.Name as CartridgeName, 
+                   CAST(r.CompletionDate AS DATE) as CompletionDate, COUNT(rd.DetailID) as UsedCount
             FROM Requests r
             JOIN Users u ON r.UserID = u.UserID
             JOIN RequestDetails rd ON r.RequestID = rd.RequestID
             JOIN CartridgeTypes c ON rd.CartridgeTypeID = c.CartridgeTypeID
             WHERE r.Status = N'Выполнена' 
               AND r.CompletionDate >= DATEADD(day, -7, GETDATE())
-            GROUP BY u.FullName, c.Name
-            ORDER BY u.FullName, c.Name";
+            GROUP BY u.FullName, r.RoomNumber, c.Name, CAST(r.CompletionDate AS DATE)
+            ORDER BY u.FullName, r.RoomNumber, c.Name";
 
                 SqlDataAdapter adapter = new SqlDataAdapter(query, connection);
                 DataTable dt = new DataTable();
                 adapter.Fill(dt);
 
                 if (dt.Rows.Count == 0)
-                {
                     MessageBox.Show("За последние 7 дней не было выполненных заявок.", "Отчет пуст", MessageBoxButton.OK, MessageBoxImage.Information);
-                }
 
                 dgReport.ItemsSource = dt.DefaultView;
             }
@@ -195,8 +211,8 @@ namespace PrinterCartridgeApp
             SaveFileDialog saveFileDialog = new SaveFileDialog
             {
                 Filter = "Excel File|*.xlsx",
-                Title = "Сохранить отчет по расходу",
-                FileName = "Отчет_Расход_" + DateTime.Now.ToString("yyyy-MM-dd")
+                Title = "Сохранить отчет",
+                FileName = "Детальный_Отчет_" + DateTime.Now.ToString("yyyy-MM-dd")
             };
 
             if (saveFileDialog.ShowDialog() == true)
@@ -207,30 +223,34 @@ namespace PrinterCartridgeApp
                     {
                         var worksheet = workbook.Worksheets.Add("Расход за 7 дней");
 
-                        // Новые заголовки
+                        // Заголовки
                         worksheet.Cell(1, 1).Value = "Сотрудник";
-                        worksheet.Cell(1, 2).Value = "Картридж";
-                        worksheet.Cell(1, 3).Value = "Израсходовано (шт)";
+                        worksheet.Cell(1, 2).Value = "Кабинет";
+                        worksheet.Cell(1, 3).Value = "Картридж";
+                        worksheet.Cell(1, 4).Value = "Дата выполнения";
+                        worksheet.Cell(1, 5).Value = "Кол-во (шт)";
 
-                        worksheet.Range("A1:C1").Style.Font.Bold = true;
+                        worksheet.Range("A1:E1").Style.Font.Bold = true;
 
                         int row = 2;
                         foreach (DataRowView item in dgReport.Items)
                         {
                             worksheet.Cell(row, 1).Value = item["UserName"].ToString();
-                            worksheet.Cell(row, 2).Value = item["CartridgeName"].ToString();
-                            worksheet.Cell(row, 3).Value = Convert.ToInt32(item["UsedCount"]);
+                            worksheet.Cell(row, 2).Value = item["RoomNumber"].ToString();
+                            worksheet.Cell(row, 3).Value = item["CartridgeName"].ToString();
+                            worksheet.Cell(row, 4).Value = Convert.ToDateTime(item["CompletionDate"]).ToString("dd.MM.yyyy");
+                            worksheet.Cell(row, 5).Value = Convert.ToInt32(item["UsedCount"]);
                             row++;
                         }
 
                         worksheet.Columns().AdjustToContents();
                         workbook.SaveAs(saveFileDialog.FileName);
                     }
-                    MessageBox.Show("Отчет успешно сохранен в Excel!", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show("Детальный отчет сохранен!", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("Ошибка при сохранении файла: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show("Ошибка: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
@@ -661,6 +681,67 @@ namespace PrinterCartridgeApp
             txtCartridgeDesc.Clear();
             btnSaveCartridge.Content = "СОХРАНИТЬ";
             btnCancelCartridge.Visibility = Visibility.Collapsed;
+        }
+        private void LoadAllRequests()
+        {
+            using (SqlConnection connection = new SqlConnection(DbHelper.ConnectionString))
+            {
+                connection.Open();
+                // Базовый запрос с плейсхолдером {0} для условия WHERE
+                string baseQuery = @"
+            SELECT r.RequestID, u.FullName as UserName, r.RoomNumber, r.CreatedDate, r.Status,
+                   ISNULL(t.FullName, N'Не назначен') as TechName,
+                   STRING_AGG(c.Name, ', ') as CartridgeNames
+            FROM Requests r
+            JOIN Users u ON r.UserID = u.UserID
+            LEFT JOIN Users t ON r.TechnicianID = t.UserID
+            JOIN RequestDetails rd ON r.RequestID = rd.RequestID
+            JOIN CartridgeTypes c ON rd.CartridgeTypeID = c.CartridgeTypeID
+            WHERE {0}
+            GROUP BY r.RequestID, u.FullName, r.RoomNumber, r.CreatedDate, r.Status, t.FullName
+            ORDER BY r.CreatedDate DESC";
+
+                // 1. Загружаем АКТИВНЫЕ (Новая, В работе)
+                string activeQuery = string.Format(baseQuery, "r.Status IN (N'Новая', N'В работе')");
+                SqlDataAdapter adapterActive = new SqlDataAdapter(activeQuery, connection);
+                DataTable dtActive = new DataTable();
+                adapterActive.Fill(dtActive);
+                dgAdminActiveRequests.ItemsSource = dtActive.DefaultView;
+
+                // 2. Загружаем ЗАВЕРШЕННЫЕ (Выполнена, Отклонена)
+                string completedQuery = string.Format(baseQuery, "r.Status IN (N'Выполнена', N'Отклонена')");
+                SqlDataAdapter adapterCompleted = new SqlDataAdapter(completedQuery, connection);
+                DataTable dtCompleted = new DataTable();
+                adapterCompleted.Fill(dtCompleted);
+                dgAdminCompletedRequests.ItemsSource = dtCompleted.DefaultView;
+            }
+        }
+        private void btnGenerateAllTimeReport_Click(object sender, RoutedEventArgs e)
+        {
+            using (SqlConnection connection = new SqlConnection(DbHelper.ConnectionString))
+            {
+                connection.Open();
+                // Убрали условие DATEADD (фильтр по дате)
+                string query = @"
+            SELECT u.FullName as UserName, r.RoomNumber, c.Name as CartridgeName, 
+                   CAST(r.CompletionDate AS DATE) as CompletionDate, COUNT(rd.DetailID) as UsedCount
+            FROM Requests r
+            JOIN Users u ON r.UserID = u.UserID
+            JOIN RequestDetails rd ON r.RequestID = rd.RequestID
+            JOIN CartridgeTypes c ON rd.CartridgeTypeID = c.CartridgeTypeID
+            WHERE r.Status = N'Выполнена' 
+            GROUP BY u.FullName, r.RoomNumber, c.Name, CAST(r.CompletionDate AS DATE)
+            ORDER BY u.FullName, r.RoomNumber, c.Name";
+
+                SqlDataAdapter adapter = new SqlDataAdapter(query, connection);
+                DataTable dt = new DataTable();
+                adapter.Fill(dt);
+
+                if (dt.Rows.Count == 0)
+                    MessageBox.Show("В системе еще нет выполненных заявок.", "Отчет пуст", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                dgReport.ItemsSource = dt.DefaultView;
+            }
         }
     }
 }
