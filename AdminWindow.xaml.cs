@@ -21,12 +21,15 @@ namespace PrinterCartridgeApp
 {
     public partial class AdminWindow : Window
     {
+        private int? editingUserId = null;
+
         public AdminWindow(int userId)
         {
             InitializeComponent();
             LoadInventory();
             LoadUserStats();
             LoadDashboard();
+            LoadUsers();
         }
 
         // Загрузка склада
@@ -287,6 +290,194 @@ namespace PrinterCartridgeApp
                     txtTotalStock.Text = cmd.ExecuteScalar().ToString();
                 }
             }
+        }
+        private void LoadUsers()
+        {
+            using (SqlConnection connection = new SqlConnection(DbHelper.ConnectionString))
+            {
+                connection.Open();
+                string query = @"
+            SELECT u.UserID, u.FullName, u.Email, u.Login, u.RoleID, r.RoleName, u.IsActive,
+                   CASE WHEN u.IsActive = 1 THEN N'Активен' ELSE N'Заблокирован' END as StatusText
+            FROM Users u
+            JOIN Roles r ON u.RoleID = r.RoleID
+            ORDER BY u.UserID";
+
+                SqlDataAdapter adapter = new SqlDataAdapter(query, connection);
+                DataTable dt = new DataTable();
+                adapter.Fill(dt);
+                dgUsers.ItemsSource = dt.DefaultView;
+            }
+        }
+
+        private void btnSaveUser_Click(object sender, RoutedEventArgs e)
+        {
+            string fullName = txtUserFullName.Text.Trim();
+            string email = txtUserEmail.Text.Trim();
+            string login = txtUserLogin.Text.Trim();
+            string password = txtUserPassword.Password.Trim();
+
+            if (string.IsNullOrEmpty(fullName) || string.IsNullOrEmpty(login) || cbUserRole.SelectedItem == null)
+            {
+                MessageBox.Show("Заполните ФИО, Логин и выберите роль!", "Внимание", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            int roleId = Convert.ToInt32(((ComboBoxItem)cbUserRole.SelectedItem).Tag);
+
+            // Проверка пароля (только если он введен)
+            if (!string.IsNullOrEmpty(password) && password.Length < 8)
+            {
+                MessageBox.Show("Пароль должен содержать минимум 8 символов!", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            using (SqlConnection connection = new SqlConnection(DbHelper.ConnectionString))
+            {
+                try
+                {
+                    connection.Open();
+                    if (editingUserId == null) // ДОБАВЛЕНИЕ
+                    {
+                        if (string.IsNullOrEmpty(password))
+                        {
+                            MessageBox.Show("Для нового пользователя нужно задать пароль!", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            return;
+                        }
+
+                        string hashedPassword = DbHelper.HashPassword(password);
+                        string query = "INSERT INTO Users (FullName, Email, Login, Password, RoleID, IsActive) VALUES (@fn, @em, @log, @pass, @role, 1)";
+                        using (SqlCommand cmd = new SqlCommand(query, connection))
+                        {
+                            cmd.Parameters.AddWithValue("@fn", fullName);
+                            cmd.Parameters.AddWithValue("@em", email);
+                            cmd.Parameters.AddWithValue("@log", login);
+                            cmd.Parameters.AddWithValue("@pass", hashedPassword);
+                            cmd.Parameters.AddWithValue("@role", roleId);
+                            cmd.ExecuteNonQuery();
+                        }
+                        MessageBox.Show("Пользователь успешно добавлен!", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                    else // РЕДАКТИРОВАНИЕ
+                    {
+                        string query;
+                        using (SqlCommand cmd = new SqlCommand())
+                        {
+                            cmd.Connection = connection;
+                            if (string.IsNullOrEmpty(password)) // Если пароль не меняем
+                            {
+                                query = "UPDATE Users SET FullName = @fn, Email = @em, Login = @log, RoleID = @role WHERE UserID = @id";
+                            }
+                            else // Если меняем пароль
+                            {
+                                query = "UPDATE Users SET FullName = @fn, Email = @em, Login = @log, Password = @pass, RoleID = @role WHERE UserID = @id";
+                                cmd.Parameters.AddWithValue("@pass", DbHelper.HashPassword(password));
+                            }
+
+                            cmd.CommandText = query;
+                            cmd.Parameters.AddWithValue("@fn", fullName);
+                            cmd.Parameters.AddWithValue("@em", email);
+                            cmd.Parameters.AddWithValue("@log", login);
+                            cmd.Parameters.AddWithValue("@role", roleId);
+                            cmd.Parameters.AddWithValue("@id", editingUserId);
+                            cmd.ExecuteNonQuery();
+                        }
+                        MessageBox.Show("Данные пользователя обновлены!", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+
+                    ResetUserForm();
+                    LoadUsers();
+                }
+                catch (SqlException ex)
+                {
+                    if (ex.Number == 2627) // Ошибка уникальности логина
+                        MessageBox.Show("Пользователь с таким логином уже существует!", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                    else
+                        MessageBox.Show("Ошибка БД: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private void btnEditUser_Click(object sender, RoutedEventArgs e)
+        {
+            if (dgUsers.SelectedItem == null)
+            {
+                MessageBox.Show("Выберите пользователя из таблицы!", "Внимание", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            DataRowView row = (DataRowView)dgUsers.SelectedItem;
+            editingUserId = Convert.ToInt32(row["UserID"]);
+
+            txtUserFormTitle.Text = "Редактирование пользователя";
+            txtUserFullName.Text = row["FullName"].ToString();
+            txtUserEmail.Text = row["Email"].ToString();
+            txtUserLogin.Text = row["Login"].ToString();
+            txtUserPassword.Clear(); // Пароль не показываем
+
+            // Выбираем роль в ComboBox
+            int roleId = Convert.ToInt32(row["RoleID"]);
+            foreach (ComboBoxItem item in cbUserRole.Items)
+            {
+                if (Convert.ToInt32(item.Tag) == roleId) { cbUserRole.SelectedItem = item; break; }
+            }
+
+            btnSaveUser.Content = "СОХРАНИТЬ ИЗМЕНЕНИЯ";
+            btnCancelUser.Visibility = Visibility.Visible;
+        }
+
+        private void btnToggleBlock_Click(object sender, RoutedEventArgs e)
+        {
+            if (dgUsers.SelectedItem == null)
+            {
+                MessageBox.Show("Выберите пользователя!", "Внимание", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            DataRowView row = (DataRowView)dgUsers.SelectedItem;
+            int userId = Convert.ToInt32(row["UserID"]);
+            bool isActive = Convert.ToBoolean(row["IsActive"]);
+            string fullName = row["FullName"].ToString();
+
+            if (userId == 1) // Защита главного админа (если его ID = 1)
+            {
+                MessageBox.Show("Нельзя заблокировать главного администратора!", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Stop);
+                return;
+            }
+
+            string action = isActive ? "заблокировать" : "разблокировать";
+            if (MessageBox.Show($"Вы уверены, что хотите {action} пользователя {fullName}?", "Подтверждение", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+            {
+                using (SqlConnection connection = new SqlConnection(DbHelper.ConnectionString))
+                {
+                    connection.Open();
+                    string query = "UPDATE Users SET IsActive = CASE WHEN IsActive = 1 THEN 0 ELSE 1 END WHERE UserID = @id";
+                    using (SqlCommand cmd = new SqlCommand(query, connection))
+                    {
+                        cmd.Parameters.AddWithValue("@id", userId);
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+                LoadUsers();
+            }
+        }
+
+        private void btnCancelUser_Click(object sender, RoutedEventArgs e)
+        {
+            ResetUserForm();
+        }
+
+        private void ResetUserForm()
+        {
+            editingUserId = null;
+            txtUserFormTitle.Text = "Добавление пользователя";
+            txtUserFullName.Clear();
+            txtUserEmail.Clear();
+            txtUserLogin.Clear();
+            txtUserPassword.Clear();
+            cbUserRole.SelectedIndex = -1;
+            btnSaveUser.Content = "СОХРАНИТЬ";
+            btnCancelUser.Visibility = Visibility.Collapsed;
         }
     }
 }

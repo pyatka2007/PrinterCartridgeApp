@@ -174,6 +174,75 @@
                     </Grid>
                 </Grid>
             </TabItem>
+            <!-- ВКЛАДКА 4: Управление пользователями -->
+            <TabItem Header="ПОЛЬЗОВАТЕЛИ">
+                <Grid Margin="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="350"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Левая часть: Таблица пользователей -->
+                    <Grid Grid.Column="0" Margin="0,0,20,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Text="Список сотрудников" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
+
+                        <DataGrid Grid.Row="1" x:Name="dgUsers" Style="{StaticResource MaterialDesignDataGrid}" 
+                                  AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" SelectionMode="Single">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="ID" Binding="{Binding UserID}" Width="40"/>
+                                <DataGridTextColumn Header="ФИО" Binding="{Binding FullName}" Width="*"/>
+                                <DataGridTextColumn Header="Логин" Binding="{Binding Login}" Width="100"/>
+                                <DataGridTextColumn Header="Роль" Binding="{Binding RoleName}" Width="120"/>
+                                <DataGridTextColumn Header="Статус" Binding="{Binding StatusText}" Width="100">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsActive}" Value="False">
+                                                    <Setter Property="Foreground" Value="Red"/>
+                                                    <Setter Property="FontWeight" Value="Bold"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+
+                        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,15,0,0">
+                            <Button x:Name="btnEditUser" Content="РЕДАКТИРОВАТЬ" Style="{StaticResource MaterialDesignRaisedSecondaryButton}" Margin="0,0,10,0" Click="btnEditUser_Click"/>
+                            <Button x:Name="btnToggleBlock" Content="ЗАБЛОКИРОВАТЬ / РАЗБЛОКИРОВАТЬ" Style="{StaticResource MaterialDesignOutlinedButton}" Click="btnToggleBlock_Click"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Правая часть: Форма добавления/редактирования -->
+                    <materialDesign:Card Grid.Column="1" Padding="20" UniformCornerRadius="10">
+                        <StackPanel>
+                            <TextBlock x:Name="txtUserFormTitle" Text="Добавление пользователя" FontSize="20" FontWeight="Bold" Margin="0,0,0,20"/>
+
+                            <TextBox x:Name="txtUserFullName" materialDesign:HintAssist.Hint="ФИО" Margin="0,0,0,15"/>
+                            <TextBox x:Name="txtUserEmail" materialDesign:HintAssist.Hint="Email" Margin="0,0,0,15"/>
+                            <TextBox x:Name="txtUserLogin" materialDesign:HintAssist.Hint="Логин" Margin="0,0,0,15"/>
+                            <PasswordBox x:Name="txtUserPassword" materialDesign:HintAssist.Hint="Пароль (мин. 8 символов)" Margin="0,0,0,15"/>
+
+                            <TextBlock Text="Роль:" Margin="0,0,0,5" Foreground="Gray"/>
+                            <ComboBox x:Name="cbUserRole" Margin="0,0,0,25">
+                                <ComboBoxItem Content="Пользователь" Tag="1"/>
+                                <ComboBoxItem Content="Техник" Tag="2"/>
+                                <ComboBoxItem Content="Администратор" Tag="3"/>
+                            </ComboBox>
+
+                            <Button x:Name="btnSaveUser" Content="СОХРАНИТЬ" Style="{StaticResource MaterialDesignRaisedButton}" Height="40" Margin="0,0,0,10" Click="btnSaveUser_Click"/>
+                            <Button x:Name="btnCancelUser" Content="ОТМЕНА" Style="{StaticResource MaterialDesignOutlinedButton}" Visibility="Collapsed" Click="btnCancelUser_Click"/>
+                        </StackPanel>
+                    </materialDesign:Card>
+                </Grid>
+            </TabItem>
         </TabControl>
     </Grid>
 </Window>

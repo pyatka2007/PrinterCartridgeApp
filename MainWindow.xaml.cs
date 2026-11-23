@@ -35,39 +35,50 @@ namespace PrinterCartridgeApp
                 return;
             }
 
+            // ХЭШИРУЕМ ВВЕДЕННЫЙ ПАРОЛЬ
+            string hashedPassword = DbHelper.HashPassword(password);
+
             using (SqlConnection connection = new SqlConnection(DbHelper.ConnectionString))
             {
                 try
                 {
                     connection.Open();
-                    string query = "SELECT UserID, FullName, RoleID FROM Users WHERE Login = @login AND Password = @password";
+                    // Добавили проверку IsActive = 1 (пользователь не заблокирован)
+                    string query = "SELECT UserID, FullName, RoleID, IsActive FROM Users WHERE Login = @login AND Password = @password";
 
                     using (SqlCommand command = new SqlCommand(query, connection))
                     {
                         command.Parameters.AddWithValue("@login", login);
-                        command.Parameters.AddWithValue("@password", password);
+                        command.Parameters.AddWithValue("@password", hashedPassword); // Передаем хэш!
 
                         using (SqlDataReader reader = command.ExecuteReader())
                         {
                             if (reader.Read())
                             {
+                                // Проверяем, не заблокирован ли аккаунт
+                                bool isActive = Convert.ToBoolean(reader["IsActive"]);
+                                if (!isActive)
+                                {
+                                    MessageBox.Show("Ваш аккаунт заблокирован администратором!", "Доступ запрещен", MessageBoxButton.OK, MessageBoxImage.Stop);
+                                    return;
+                                }
+
                                 int userId = Convert.ToInt32(reader["UserID"]);
                                 int roleId = Convert.ToInt32(reader["RoleID"]);
 
-                                // Открываем окно в зависимости от роли
-                                if (roleId == 1) // Пользователь
+                                if (roleId == 1)
                                 {
                                     UserWindow userWin = new UserWindow(userId);
                                     userWin.Show();
                                     this.Close();
                                 }
-                                else if (roleId == 2) // Техник
+                                else if (roleId == 2)
                                 {
                                     TechWindow techWin = new TechWindow(userId);
                                     techWin.Show();
                                     this.Close();
                                 }
-                                else if (roleId == 3) // Администратор
+                                else if (roleId == 3)
                                 {
                                     AdminWindow adminWin = new AdminWindow(userId);
                                     adminWin.Show();
