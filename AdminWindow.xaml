@@ -106,9 +106,12 @@
                     </DataGrid>
 
                     <!-- КНОПКИ УПРАВЛЕНИЯ -->
-                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,15,0,0">
-                        <Button x:Name="btnAddStock" Content="ДОБАВИТЬ 1 ШТ." Style="{StaticResource MaterialDesignRaisedButton}" Margin="0,0,15,0" Click="btnAddStock_Click"/>
-                        <Button x:Name="btnRemoveStock" Content="СПИСАТЬ 1 ШТ." Style="{StaticResource MaterialDesignOutlinedButton}" Click="btnRemoveStock_Click"/>
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,15,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="Количество:" VerticalAlignment="Center" Margin="0,0,10,0" FontSize="14" FontWeight="SemiBold"/>
+                        <TextBox x:Name="txtStockAmount" Width="60" Text="1" Margin="0,0,15,0" materialDesign:HintAssist.Hint="Кол-во" HorizontalContentAlignment="Center"/>
+
+                        <Button x:Name="btnAddStock" Content="ПОПОЛНИТЬ" Style="{StaticResource MaterialDesignRaisedButton}" Margin="0,0,10,0" Click="btnAddStock_Click"/>
+                        <Button x:Name="btnRemoveStock" Content="СПИСАТЬ" Style="{StaticResource MaterialDesignOutlinedButton}" Click="btnRemoveStock_Click"/>
                     </StackPanel>
                 </Grid>
             </TabItem>
@@ -159,19 +162,176 @@
                         <TextBlock Grid.Row="0" Text="Отчет по расходу" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
 
                         <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,15">
-                            <Button x:Name="btnGenerateReport" Content="ПОКАЗАТЬ РАСХОД ЗА 7 ДНЕЙ" Style="{StaticResource MaterialDesignRaisedSecondaryButton}" Margin="0,0,10,0" Click="btnGenerateReport_Click"/>
+                            <Button x:Name="btnGenerateReport" Content="ЗА 7 ДНЕЙ" Style="{StaticResource MaterialDesignRaisedSecondaryButton}" Margin="0,0,10,0" Click="btnGenerateReport_Click"/>
+                            <Button x:Name="btnGenerateAllTimeReport" Content="ЗА ВСЁ ВРЕМЯ" Style="{StaticResource MaterialDesignRaisedSecondaryButton}" Margin="0,0,10,0" Click="btnGenerateAllTimeReport_Click"/>
                             <Button x:Name="btnExportExcel" Content="ЭКСПОРТ В EXCEL" Style="{StaticResource MaterialDesignRaisedButton}" Click="btnExportExcel_Click"/>
                         </StackPanel>
 
                         <DataGrid Grid.Row="2" x:Name="dgReport" Style="{StaticResource MaterialDesignDataGrid}" 
-                                  AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False">
+          AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False">
                             <DataGrid.Columns>
+                                <DataGridTextColumn Header="Сотрудник" Binding="{Binding UserName}" Width="150"/>
+                                <DataGridTextColumn Header="Каб." Binding="{Binding RoomNumber}" Width="50"/>
                                 <DataGridTextColumn Header="Картридж" Binding="{Binding CartridgeName}" Width="*"/>
-                                <DataGridTextColumn Header="Израсходовано (шт)" Binding="{Binding UsedCount}" Width="150" FontWeight="Bold"/>
+                                <DataGridTextColumn Header="Дата" Binding="{Binding CompletionDate, StringFormat=\{0:dd.MM.yyyy\}}" Width="90"/>
+                                <DataGridTextColumn Header="Кол-во" Binding="{Binding UsedCount}" Width="70" FontWeight="Bold"/>
                             </DataGrid.Columns>
                         </DataGrid>
                     </Grid>
                 </Grid>
+            </TabItem>
+            <!-- ВКЛАДКА 4: Управление пользователями -->
+            <TabItem Header="ПОЛЬЗОВАТЕЛИ">
+                <Grid Margin="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="350"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Левая часть: Таблица пользователей -->
+                    <Grid Grid.Column="0" Margin="0,0,20,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Text="Список сотрудников" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
+
+                        <DataGrid Grid.Row="1" x:Name="dgUsers" Style="{StaticResource MaterialDesignDataGrid}" 
+                                  AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" SelectionMode="Single">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="ID" Binding="{Binding UserID}" Width="40"/>
+                                <DataGridTextColumn Header="ФИО" Binding="{Binding FullName}" Width="*"/>
+                                <DataGridTextColumn Header="Логин" Binding="{Binding Login}" Width="100"/>
+                                <DataGridTextColumn Header="Роль" Binding="{Binding RoleName}" Width="120"/>
+                                <DataGridTextColumn Header="Статус" Binding="{Binding StatusText}" Width="100">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsActive}" Value="False">
+                                                    <Setter Property="Foreground" Value="Red"/>
+                                                    <Setter Property="FontWeight" Value="Bold"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+
+                        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,15,0,0">
+                            <Button x:Name="btnEditUser" Content="РЕДАКТИРОВАТЬ" Style="{StaticResource MaterialDesignRaisedSecondaryButton}" Margin="0,0,10,0" Click="btnEditUser_Click"/>
+                            <Button x:Name="btnToggleBlock" Content="ЗАБЛОКИРОВАТЬ / РАЗБЛОКИРОВАТЬ" Style="{StaticResource MaterialDesignOutlinedButton}" Click="btnToggleBlock_Click"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Правая часть: Форма добавления/редактирования -->
+                    <materialDesign:Card Grid.Column="1" Padding="20" UniformCornerRadius="10">
+                        <StackPanel>
+                            <TextBlock x:Name="txtUserFormTitle" Text="Добавление пользователя" FontSize="20" FontWeight="Bold" Margin="0,0,0,20"/>
+
+                            <TextBox x:Name="txtUserFullName" materialDesign:HintAssist.Hint="ФИО" Margin="0,0,0,15"/>
+                            <TextBox x:Name="txtUserEmail" materialDesign:HintAssist.Hint="Email" Margin="0,0,0,15"/>
+                            <TextBox x:Name="txtUserLogin" materialDesign:HintAssist.Hint="Логин" Margin="0,0,0,15"/>
+                            <PasswordBox x:Name="txtUserPassword" materialDesign:HintAssist.Hint="Пароль (мин. 8 символов)" Margin="0,0,0,15"/>
+
+                            <TextBlock Text="Роль:" Margin="0,0,0,5" Foreground="Gray"/>
+                            <ComboBox x:Name="cbUserRole" Margin="0,0,0,25">
+                                <ComboBoxItem Content="Пользователь" Tag="1"/>
+                                <ComboBoxItem Content="Техник" Tag="2"/>
+                                <ComboBoxItem Content="Администратор" Tag="3"/>
+                            </ComboBox>
+
+                            <Button x:Name="btnSaveUser" Content="СОХРАНИТЬ" Style="{StaticResource MaterialDesignRaisedButton}" Height="40" Margin="0,0,0,10" Click="btnSaveUser_Click"/>
+                            <Button x:Name="btnCancelUser" Content="ОТМЕНА" Style="{StaticResource MaterialDesignOutlinedButton}" Visibility="Collapsed" Click="btnCancelUser_Click"/>
+                        </StackPanel>
+                    </materialDesign:Card>
+                </Grid>
+            </TabItem>
+            <!-- ВКЛАДКА 5: Справочник картриджей -->
+            <TabItem Header="СПРАВОЧНИК КАРТРИДЖЕЙ">
+                <Grid Margin="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="350"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Левая часть: Таблица картриджей -->
+                    <Grid Grid.Column="0" Margin="0,0,20,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Text="Модели картриджей" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
+
+                        <DataGrid Grid.Row="1" x:Name="dgCartridgeTypes" Style="{StaticResource MaterialDesignDataGrid}" 
+                                  AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" SelectionMode="Single">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="ID" Binding="{Binding CartridgeTypeID}" Width="40"/>
+                                <DataGridTextColumn Header="Модель" Binding="{Binding Name}" Width="100"/>
+                                <DataGridTextColumn Header="Описание" Binding="{Binding Description}" Width="*"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+
+                        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,15,0,0">
+                            <Button x:Name="btnEditCartridge" Content="РЕДАКТИРОВАТЬ" Style="{StaticResource MaterialDesignRaisedSecondaryButton}" Margin="0,0,10,0" Click="btnEditCartridge_Click"/>
+                            <Button x:Name="btnDeleteCartridge" Content="УДАЛИТЬ" Style="{StaticResource MaterialDesignOutlinedButton}" Click="btnDeleteCartridge_Click"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Правая часть: Форма добавления/редактирования -->
+                    <materialDesign:Card Grid.Column="1" Padding="20" UniformCornerRadius="10">
+                        <StackPanel>
+                            <TextBlock x:Name="txtCartridgeFormTitle" Text="Новый картридж" FontSize="20" FontWeight="Bold" Margin="0,0,0,20"/>
+
+                            <TextBox x:Name="txtCartridgeName" materialDesign:HintAssist.Hint="Модель (например, PG-445)" Margin="0,0,0,15"/>
+                            <TextBox x:Name="txtCartridgeDesc" materialDesign:HintAssist.Hint="Описание (например, Чёрный картридж)" Margin="0,0,0,25"/>
+
+                            <Button x:Name="btnSaveCartridge" Content="СОХРАНИТЬ" Style="{StaticResource MaterialDesignRaisedButton}" Height="40" Margin="0,0,0,10" Click="btnSaveCartridge_Click"/>
+                            <Button x:Name="btnCancelCartridge" Content="ОТМЕНА" Style="{StaticResource MaterialDesignOutlinedButton}" Visibility="Collapsed" Click="btnCancelCartridge_Click"/>
+                        </StackPanel>
+                    </materialDesign:Card>
+                </Grid>
+            </TabItem>
+            <!-- ВКЛАДКА 6: Все заявки (Мониторинг) -->
+            <TabItem Header="ВСЕ ЗАЯВКИ">
+                <TabControl Style="{StaticResource MaterialDesignTabControl}" Margin="0,10,0,0">
+
+                    <!-- ВКЛАДКА 6.1: Активные заявки -->
+                    <TabItem Header="АКТИВНЫЕ">
+                        <DataGrid x:Name="dgAdminActiveRequests" Style="{StaticResource MaterialDesignDataGrid}" 
+                                  AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" Margin="0,5,0,0">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="ID" Binding="{Binding RequestID}" Width="50"/>
+                                <DataGridTextColumn Header="Сотрудник" Binding="{Binding UserName}" Width="180"/>
+                                <DataGridTextColumn Header="Кабинет" Binding="{Binding RoomNumber}" Width="80"/>
+                                <DataGridTextColumn Header="Заказанные картриджи" Binding="{Binding CartridgeNames}" Width="*"/>
+                                <DataGridTextColumn Header="Дата создания" Binding="{Binding CreatedDate, StringFormat=\{0:dd.MM.yyyy HH:mm\}}" Width="120"/>
+                                <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="100"/>
+                                <DataGridTextColumn Header="Техник" Binding="{Binding TechName}" Width="150"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </TabItem>
+
+                    <!-- ВКЛАДКА 6.2: Завершенные заявки -->
+                    <TabItem Header="ЗАВЕРШЕННЫЕ">
+                        <DataGrid x:Name="dgAdminCompletedRequests" Style="{StaticResource MaterialDesignDataGrid}" 
+                                  AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" Margin="0,5,0,0">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="ID" Binding="{Binding RequestID}" Width="50"/>
+                                <DataGridTextColumn Header="Сотрудник" Binding="{Binding UserName}" Width="180"/>
+                                <DataGridTextColumn Header="Кабинет" Binding="{Binding RoomNumber}" Width="80"/>
+                                <DataGridTextColumn Header="Заказанные картриджи" Binding="{Binding CartridgeNames}" Width="*"/>
+                                <DataGridTextColumn Header="Дата создания" Binding="{Binding CreatedDate, StringFormat=\{0:dd.MM.yyyy HH:mm\}}" Width="120"/>
+                                <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="100"/>
+                                <DataGridTextColumn Header="Техник" Binding="{Binding TechName}" Width="150"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </TabItem>
+                </TabControl>
             </TabItem>
         </TabControl>
     </Grid>

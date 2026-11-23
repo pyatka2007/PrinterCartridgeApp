@@ -28,49 +28,57 @@ namespace PrinterCartridgeApp
             LoadRequests();
         }
 
-        // Загрузка всех заявок, кроме отклоненных
+        // Загрузка заявок (делим на активные и выполненные)
         private void LoadRequests()
         {
             using (SqlConnection connection = new SqlConnection(DbHelper.ConnectionString))
             {
                 connection.Open();
-                string query = @"
+                // Собираем названия картриджей в одну строку через STRING_AGG
+                string baseQuery = @"
                     SELECT r.RequestID, u.FullName as UserName, r.RoomNumber, 
-                           c.Name as CartridgeName, r.CreatedDate, r.Status, r.Comment
+                           r.CreatedDate, r.Status, r.Comment,
+                           STRING_AGG(c.Name, ', ') as CartridgeNames
                     FROM Requests r
                     JOIN Users u ON r.UserID = u.UserID
-                    JOIN CartridgeTypes c ON r.CartridgeTypeID = c.CartridgeTypeID
-                    WHERE r.Status != N'Отклонена'
-                    ORDER BY 
-                        CASE r.Status 
-                            WHEN N'Новая' THEN 1 
-                            WHEN N'В работе' THEN 2 
-                            ELSE 3 
-                        END, r.CreatedDate DESC";
+                    JOIN RequestDetails rd ON r.RequestID = rd.RequestID
+                    JOIN CartridgeTypes c ON rd.CartridgeTypeID = c.CartridgeTypeID
+                    WHERE {0}
+                    GROUP BY r.RequestID, u.FullName, r.RoomNumber, r.CreatedDate, r.Status, r.Comment
+                    ORDER BY r.CreatedDate DESC";
 
-                SqlDataAdapter adapter = new SqlDataAdapter(query, connection);
-                DataTable dt = new DataTable();
-                adapter.Fill(dt);
-                dgRequests.ItemsSource = dt.DefaultView;
+                // Активные
+                string activeQuery = string.Format(baseQuery, "r.Status IN (N'Новая', N'В работе')");
+                SqlDataAdapter adapterActive = new SqlDataAdapter(activeQuery, connection);
+                DataTable dtActive = new DataTable();
+                adapterActive.Fill(dtActive);
+                dgActiveRequests.ItemsSource = dtActive.DefaultView;
+
+                // Выполненные
+                string completedQuery = string.Format(baseQuery, "r.Status = N'Выполнена'");
+                SqlDataAdapter adapterCompleted = new SqlDataAdapter(completedQuery, connection);
+                DataTable dtCompleted = new DataTable();
+                adapterCompleted.Fill(dtCompleted);
+                dgCompletedRequests.ItemsSource = dtCompleted.DefaultView;
             }
         }
 
         // Взять заявку в работу
         private void btnTakeWork_Click(object sender, RoutedEventArgs e)
         {
-            if (dgRequests.SelectedItem == null)
+            if (dgActiveRequests.SelectedItem == null)
             {
-                MessageBox.Show("Выберите заявку из таблицы!", "Внимание", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Выберите заявку из вкладки 'АКТИВНЫЕ'!", "Внимание", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            DataRowView row = (DataRowView)dgRequests.SelectedItem;
+            DataRowView row = (DataRowView)dgActiveRequests.SelectedItem;
             string currentStatus = row["Status"].ToString();
             int requestId = Convert.ToInt32(row["RequestID"]);
 
-            if (currentStatus == "Выполнена")
+            if (currentStatus == "В работе")
             {
-                MessageBox.Show("Эта заявка уже выполнена!", "Внимание", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("Эта заявка уже взята в работу!", "Внимание", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -85,72 +93,76 @@ namespace PrinterCartridgeApp
                     cmd.ExecuteNonQuery();
                 }
             }
-            LoadRequests(); // Обновляем таблицу
+            LoadRequests();
         }
 
-        // Выполнить заявку (списать картридж со склада)
+        // Выполнить заявку (списать все картриджи со склада)
         private void btnComplete_Click(object sender, RoutedEventArgs e)
         {
-            if (dgRequests.SelectedItem == null)
+            if (dgActiveRequests.SelectedItem == null)
             {
-                MessageBox.Show("Выберите заявку из таблицы!", "Внимание", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Выберите заявку из вкладки 'АКТИВНЫЕ'!", "Внимание", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            DataRowView row = (DataRowView)dgRequests.SelectedItem;
-            string currentStatus = row["Status"].ToString();
+            DataRowView row = (DataRowView)dgActiveRequests.SelectedItem;
             int requestId = Convert.ToInt32(row["RequestID"]);
-            string cartridgeName = row["CartridgeName"].ToString();
+            string cartridgeNames = row["CartridgeNames"].ToString();
 
-            if (currentStatus == "Выполнена")
-            {
-                MessageBox.Show("Эта заявка уже выполнена!", "Внимание", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            // Проверка остатков на складе
             using (SqlConnection connection = new SqlConnection(DbHelper.ConnectionString))
             {
                 connection.Open();
 
-                // Узнаем ID картриджа из заявки
-                string getCartridgeQuery = "SELECT CartridgeTypeID FROM Requests WHERE RequestID = @id";
-                int cartridgeId = 0;
-                using (SqlCommand cmd = new SqlCommand(getCartridgeQuery, connection))
+                // 1. Получаем список всех ID картриджей в этой заявке
+                List<int> cartridgeIds = new List<int>();
+                string getDetailsQuery = "SELECT CartridgeTypeID FROM RequestDetails WHERE RequestID = @id";
+                using (SqlCommand cmd = new SqlCommand(getDetailsQuery, connection))
                 {
                     cmd.Parameters.AddWithValue("@id", requestId);
-                    cartridgeId = (int)cmd.ExecuteScalar();
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            cartridgeIds.Add(Convert.ToInt32(reader["CartridgeTypeID"]));
+                        }
+                    }
                 }
 
-                // Проверяем, есть ли картридж на складе
-                string checkStockQuery = "SELECT Quantity FROM Inventory WHERE CartridgeTypeID = @cartId";
-                int stock = 0;
-                using (SqlCommand cmd = new SqlCommand(checkStockQuery, connection))
+                // 2. Проверяем наличие каждого картриджа на складе
+                foreach (int cartId in cartridgeIds)
                 {
-                    cmd.Parameters.AddWithValue("@cartId", cartridgeId);
-                    stock = (int)cmd.ExecuteScalar();
+                    string checkStockQuery = "SELECT Quantity FROM Inventory WHERE CartridgeTypeID = @cartId";
+                    int stock = 0;
+                    using (SqlCommand cmd = new SqlCommand(checkStockQuery, connection))
+                    {
+                        cmd.Parameters.AddWithValue("@cartId", cartId);
+                        stock = (int)cmd.ExecuteScalar();
+                    }
+
+                    if (stock <= 0)
+                    {
+                        MessageBox.Show($"На складе нет одного из картриджей ({cartridgeNames})! Пополните склад.", "Ошибка склада", MessageBoxButton.OK, MessageBoxImage.Error);
+                        return; // Прерываем, если чего-то не хватает
+                    }
                 }
 
-                if (stock <= 0)
-                {
-                    MessageBox.Show($"На складе нет картриджей {cartridgeName}! Пополните склад перед выполнением.", "Ошибка склада", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
-
-                // Используем транзакцию: либо списываем и закрываем заявку, либо откатываем всё
+                // 3. Используем транзакцию для списания и закрытия
                 using (SqlTransaction transaction = connection.BeginTransaction())
                 {
                     try
                     {
-                        // 1. Списываем 1 шт со склада
-                        string updateStockQuery = "UPDATE Inventory SET Quantity = Quantity - 1 WHERE CartridgeTypeID = @cartId";
-                        using (SqlCommand cmd = new SqlCommand(updateStockQuery, connection, transaction))
+                        // Списываем каждый картридж
+                        foreach (int cartId in cartridgeIds)
                         {
-                            cmd.Parameters.AddWithValue("@cartId", cartridgeId);
-                            cmd.ExecuteNonQuery();
+                            string updateStockQuery = "UPDATE Inventory SET Quantity = Quantity - 1 WHERE CartridgeTypeID = @cartId";
+                            using (SqlCommand cmd = new SqlCommand(updateStockQuery, connection, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@cartId", cartId);
+                                cmd.ExecuteNonQuery();
+                            }
                         }
 
-                        // 2. Закрываем заявку
+                        // Закрываем заявку
                         string updateRequestQuery = @"
                             UPDATE Requests 
                             SET Status = N'Выполнена', 
@@ -167,19 +179,21 @@ namespace PrinterCartridgeApp
                             cmd.ExecuteNonQuery();
                         }
 
-                        transaction.Commit(); // Подтверждаем изменения
-                        MessageBox.Show("Заявка выполнена, картридж списан со склада!", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
+                        transaction.Commit();
+                        MessageBox.Show($"Заявка выполнена, картриджи ({cartridgeNames}) списаны со склада!", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
                         txtComment.Clear();
                         LoadRequests();
                     }
                     catch (Exception ex)
                     {
-                        transaction.Rollback(); // Откатываем, если что-то пошло не так
+                        transaction.Rollback();
                         MessageBox.Show("Ошибка при выполнении заявки: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
                     }
                 }
             }
         }
+
+        // Тема (без изменений)
         private void ThemeToggle_Checked(object sender, RoutedEventArgs e)
         {
             var paletteHelper = new PaletteHelper();
