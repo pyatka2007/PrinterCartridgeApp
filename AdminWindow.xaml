@@ -243,6 +243,54 @@
                     </materialDesign:Card>
                 </Grid>
             </TabItem>
+            <!-- ВКЛАДКА 5: Справочник картриджей -->
+            <TabItem Header="СПРАВОЧНИК КАРТРИДЖЕЙ">
+                <Grid Margin="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="350"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Левая часть: Таблица картриджей -->
+                    <Grid Grid.Column="0" Margin="0,0,20,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Text="Модели картриджей" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
+
+                        <DataGrid Grid.Row="1" x:Name="dgCartridgeTypes" Style="{StaticResource MaterialDesignDataGrid}" 
+                                  AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" SelectionMode="Single">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="ID" Binding="{Binding CartridgeTypeID}" Width="40"/>
+                                <DataGridTextColumn Header="Модель" Binding="{Binding Name}" Width="100"/>
+                                <DataGridTextColumn Header="Описание" Binding="{Binding Description}" Width="*"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+
+                        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,15,0,0">
+                            <Button x:Name="btnEditCartridge" Content="РЕДАКТИРОВАТЬ" Style="{StaticResource MaterialDesignRaisedSecondaryButton}" Margin="0,0,10,0" Click="btnEditCartridge_Click"/>
+                            <Button x:Name="btnDeleteCartridge" Content="УДАЛИТЬ" Style="{StaticResource MaterialDesignOutlinedButton}" Click="btnDeleteCartridge_Click"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Правая часть: Форма добавления/редактирования -->
+                    <materialDesign:Card Grid.Column="1" Padding="20" UniformCornerRadius="10">
+                        <StackPanel>
+                            <TextBlock x:Name="txtCartridgeFormTitle" Text="Новый картридж" FontSize="20" FontWeight="Bold" Margin="0,0,0,20"/>
+
+                            <TextBox x:Name="txtCartridgeName" materialDesign:HintAssist.Hint="Модель (например, PG-445)" Margin="0,0,0,15"/>
+                            <TextBox x:Name="txtCartridgeDesc" materialDesign:HintAssist.Hint="Описание (например, Чёрный картридж)" Margin="0,0,0,25"/>
+
+                            <Button x:Name="btnSaveCartridge" Content="СОХРАНИТЬ" Style="{StaticResource MaterialDesignRaisedButton}" Height="40" Margin="0,0,0,10" Click="btnSaveCartridge_Click"/>
+                            <Button x:Name="btnCancelCartridge" Content="ОТМЕНА" Style="{StaticResource MaterialDesignOutlinedButton}" Visibility="Collapsed" Click="btnCancelCartridge_Click"/>
+                        </StackPanel>
+                    </materialDesign:Card>
+                </Grid>
+            </TabItem>
+
         </TabControl>
     </Grid>
 </Window>

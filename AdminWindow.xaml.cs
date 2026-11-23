@@ -22,6 +22,7 @@ namespace PrinterCartridgeApp
     public partial class AdminWindow : Window
     {
         private int? editingUserId = null;
+        private int? editingCartridgeId = null;
 
         public AdminWindow(int userId)
         {
@@ -30,6 +31,7 @@ namespace PrinterCartridgeApp
             LoadUserStats();
             LoadDashboard();
             LoadUsers();
+            LoadCartridgeTypes();
         }
 
         // Загрузка склада
@@ -478,6 +480,187 @@ namespace PrinterCartridgeApp
             cbUserRole.SelectedIndex = -1;
             btnSaveUser.Content = "СОХРАНИТЬ";
             btnCancelUser.Visibility = Visibility.Collapsed;
+        }
+        // --- ЛОГИКА УПРАВЛЕНИЯ СПРАВОЧНИКОМ КАРТРИДЖЕЙ ---
+
+        private void LoadCartridgeTypes()
+        {
+            using (SqlConnection connection = new SqlConnection(DbHelper.ConnectionString))
+            {
+                connection.Open();
+                string query = "SELECT CartridgeTypeID, Name, Description FROM CartridgeTypes ORDER BY CartridgeTypeID";
+                SqlDataAdapter adapter = new SqlDataAdapter(query, connection);
+                DataTable dt = new DataTable();
+                adapter.Fill(dt);
+                dgCartridgeTypes.ItemsSource = dt.DefaultView;
+            }
+        }
+
+        private void btnSaveCartridge_Click(object sender, RoutedEventArgs e)
+        {
+            string name = txtCartridgeName.Text.Trim();
+            string desc = txtCartridgeDesc.Text.Trim();
+
+            if (string.IsNullOrEmpty(name))
+            {
+                MessageBox.Show("Введите модель картриджа!", "Внимание", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            using (SqlConnection connection = new SqlConnection(DbHelper.ConnectionString))
+            {
+                connection.Open();
+                using (SqlTransaction transaction = connection.BeginTransaction())
+                {
+                    try
+                    {
+                        if (editingCartridgeId == null) // ДОБАВЛЕНИЕ
+                        {
+                            // 1. Добавляем в справочник
+                            string insertType = "INSERT INTO CartridgeTypes (Name, Description) OUTPUT INSERTED.CartridgeTypeID VALUES (@name, @desc)";
+                            int newTypeId;
+                            using (SqlCommand cmd = new SqlCommand(insertType, connection, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@name", name);
+                                cmd.Parameters.AddWithValue("@desc", desc);
+                                newTypeId = (int)cmd.ExecuteScalar();
+                            }
+
+                            // 2. Автоматически создаем запись на складе с нулевым остатком
+                            string insertInv = "INSERT INTO Inventory (CartridgeTypeID, Quantity) VALUES (@id, 0)";
+                            using (SqlCommand cmdInv = new SqlCommand(insertInv, connection, transaction))
+                            {
+                                cmdInv.Parameters.AddWithValue("@id", newTypeId);
+                                cmdInv.ExecuteNonQuery();
+                            }
+                            MessageBox.Show("Картридж добавлен! Теперь он есть на складе (остаток 0).", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
+                        }
+                        else // РЕДАКТИРОВАНИЕ
+                        {
+                            string updateQuery = "UPDATE CartridgeTypes SET Name = @name, Description = @desc WHERE CartridgeTypeID = @id";
+                            using (SqlCommand cmd = new SqlCommand(updateQuery, connection, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@name", name);
+                                cmd.Parameters.AddWithValue("@desc", desc);
+                                cmd.Parameters.AddWithValue("@id", editingCartridgeId);
+                                cmd.ExecuteNonQuery();
+                            }
+                            MessageBox.Show("Данные картриджа обновлены!", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
+                        }
+                        transaction.Commit();
+                        ResetCartridgeForm();
+                        LoadCartridgeTypes();
+                        LoadInventory(); // Обновляем склад, чтобы там появилась новая строка
+                    }
+                    catch (Exception ex)
+                    {
+                        transaction.Rollback();
+                        MessageBox.Show("Ошибка: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                }
+            }
+        }
+
+        private void btnEditCartridge_Click(object sender, RoutedEventArgs e)
+        {
+            if (dgCartridgeTypes.SelectedItem == null)
+            {
+                MessageBox.Show("Выберите картридж из таблицы!", "Внимание", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            DataRowView row = (DataRowView)dgCartridgeTypes.SelectedItem;
+            editingCartridgeId = Convert.ToInt32(row["CartridgeTypeID"]);
+
+            txtCartridgeFormTitle.Text = "Редактирование картриджа";
+            txtCartridgeName.Text = row["Name"].ToString();
+            txtCartridgeDesc.Text = row["Description"].ToString();
+
+            btnSaveCartridge.Content = "СОХРАНИТЬ ИЗМЕНЕНИЯ";
+            btnCancelCartridge.Visibility = Visibility.Visible;
+        }
+
+        private void btnDeleteCartridge_Click(object sender, RoutedEventArgs e)
+        {
+            if (dgCartridgeTypes.SelectedItem == null)
+            {
+                MessageBox.Show("Выберите картридж из таблицы!", "Внимание", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            DataRowView row = (DataRowView)dgCartridgeTypes.SelectedItem;
+            int cartridgeId = Convert.ToInt32(row["CartridgeTypeID"]);
+            string name = row["Name"].ToString();
+
+            // Проверяем, используется ли картридж в заявках
+            using (SqlConnection connection = new SqlConnection(DbHelper.ConnectionString))
+            {
+                connection.Open();
+                string checkQuery = "SELECT COUNT(*) FROM RequestDetails WHERE CartridgeTypeID = @id";
+                using (SqlCommand cmd = new SqlCommand(checkQuery, connection))
+                {
+                    cmd.Parameters.AddWithValue("@id", cartridgeId);
+                    int count = (int)cmd.ExecuteScalar();
+                    if (count > 0)
+                    {
+                        MessageBox.Show($"Нельзя удалить картридж '{name}', так как он используется в заявках (их {count} шт.).", "Ошибка удаления", MessageBoxButton.OK, MessageBoxImage.Error);
+                        return;
+                    }
+                }
+            }
+
+            if (MessageBox.Show($"Вы уверены, что хотите удалить картридж '{name}' из справочника?", "Подтверждение", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+            {
+                using (SqlConnection connection = new SqlConnection(DbHelper.ConnectionString))
+                {
+                    connection.Open();
+                    using (SqlTransaction transaction = connection.BeginTransaction())
+                    {
+                        try
+                        {
+                            // Сначала удаляем со склада, потом из справочника
+                            string delInv = "DELETE FROM Inventory WHERE CartridgeTypeID = @id";
+                            using (SqlCommand cmd = new SqlCommand(delInv, connection, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@id", cartridgeId);
+                                cmd.ExecuteNonQuery();
+                            }
+
+                            string delType = "DELETE FROM CartridgeTypes WHERE CartridgeTypeID = @id";
+                            using (SqlCommand cmd = new SqlCommand(delType, connection, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@id", cartridgeId);
+                                cmd.ExecuteNonQuery();
+                            }
+
+                            transaction.Commit();
+                            MessageBox.Show("Картридж удален!", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
+                            LoadCartridgeTypes();
+                            LoadInventory();
+                        }
+                        catch (Exception ex)
+                        {
+                            transaction.Rollback();
+                            MessageBox.Show("Ошибка при удалении: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                        }
+                    }
+                }
+            }
+        }
+
+        private void btnCancelCartridge_Click(object sender, RoutedEventArgs e)
+        {
+            ResetCartridgeForm();
+        }
+
+        private void ResetCartridgeForm()
+        {
+            editingCartridgeId = null;
+            txtCartridgeFormTitle.Text = "Новый картридж";
+            txtCartridgeName.Clear();
+            txtCartridgeDesc.Clear();
+            btnSaveCartridge.Content = "СОХРАНИТЬ";
+            btnCancelCartridge.Visibility = Visibility.Collapsed;
         }
     }
 }
